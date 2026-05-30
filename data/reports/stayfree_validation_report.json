@@ -1,0 +1,12 @@
+{
+  "status": "SUCCESS",
+  "processed_events": 19366,
+  "processed_days": 62,
+  "total_anomalies_logged": 0,
+  "anomaly_breakdown": {
+    "duplicate_ids": 0,
+    "invalid_timestamps": 0,
+    "negative_durations": 0,
+    "impossible_long_durations": 0
+  }
+}

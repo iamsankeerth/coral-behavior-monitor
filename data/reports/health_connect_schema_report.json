@@ -1,0 +1,10 @@
+{
+  "status": "INTEGRATION_DRAFT",
+  "configured_source": "https://github.com/withcoral/coral/tree/main/sources/community/google_drive",
+  "description": "User has chosen to integrate Google Drive directly into Coral. A local health data generator is active to seed behavior-health daily joints with mock metrics for testing.",
+  "schema_mapped": {
+    "steps_table": "health_daily.steps_total",
+    "sleep_table": "health_daily.sleep_minutes",
+    "workout_table": "health_daily.workout_minutes"
+  }
+}
