@@ -4,8 +4,8 @@ This report summarizes the daily physical health aggregates generated in the **H
 
 ## 🏃 Summary Statistics
 * **Data Source**: **REAL_DATABASE**
-* **Processed Days**: **62** (Aligned with StayFree dates)
-* **Average Daily Steps**: **13251.11** steps
+* **Processed Days**: **63** (Aligned with StayFree dates)
+* **Average Daily Steps**: **13040.78** steps
 * **Average Daily Sleep**: **N/A** (*Sleep table empty in source DB)
 * **Total Workout Sessions**: **11** active exercises logged
 

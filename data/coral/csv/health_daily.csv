@@ -61,3 +61,4 @@ date_ist,steps_total,sleep_minutes,sleep_start_ist,sleep_end_ist,sleep_session_c
 2026-05-28,12730,,,,0,,,,,21.81,1,454.98,,Real Health Connect SQLite DB,*N/A: Sleep session and heart rate tables were completely empty in your source Health Connect database
 2026-05-29,13173,,,,0,,,,,0.0,0,437.92,,Real Health Connect SQLite DB,*N/A: Sleep session and heart rate tables were completely empty in your source Health Connect database
 2026-05-30,5797,,,,0,,,,,0.0,0,414.56,,Real Health Connect SQLite DB,*N/A: Sleep session and heart rate tables were completely empty in your source Health Connect database
+2026-05-31,0,,,,0,,,,,0.0,0,,,Real Health Connect SQLite DB,*N/A: Sleep session and heart rate tables were completely empty in your source Health Connect database;SEDENTARY_DAY

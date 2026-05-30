@@ -1,10 +1,10 @@
 {
   "status": "SUCCESS",
-  "processed_events": 19366,
-  "processed_days": 62,
-  "total_anomalies_logged": 0,
+  "processed_events": 18964,
+  "processed_days": 63,
+  "total_anomalies_logged": 2479,
   "anomaly_breakdown": {
-    "duplicate_ids": 0,
+    "duplicate_ids": 2479,
     "invalid_timestamps": 0,
     "negative_durations": 0,
     "impossible_long_durations": 0
