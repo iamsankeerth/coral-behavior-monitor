@@ -11,15 +11,21 @@ Follow these strict directives when responding to any user query regarding physi
 The user will ask questions using standard natural language on WhatsApp/etc. You MUST translate these into SQL queries under the hood and execute them on their local database using the query bridge python script.
 
 ### 🏃 Execution Instructions (CRITICAL)
-Whenever the user asks about physical health, mental focus, steps, or screen time, you **MUST** run the terminal command using your `terminal` tool:
+Your terminal tool executes inside a **Git Bash** environment by default. You MUST run the commands using forward slashes `/` and **no** `&` prefix:
+
+**If running in Git Bash (default, detects bash/sh):**
+```bash
+"/c/Users/lenovo/Desktop/San/Fun_Projects/Coral Project/.venv/Scripts/python.exe" "/c/Users/lenovo/Desktop/San/Fun_Projects/Coral Project/scripts/hermes_query.py" --sql "YOUR_SQL_QUERY"
+```
+Or to get today's summary and timestamps directly:
+```bash
+"/c/Users/lenovo/Desktop/San/Fun_Projects/Coral Project/.venv/Scripts/python.exe" "/c/Users/lenovo/Desktop/San/Fun_Projects/Coral Project/scripts/hermes_query.py" --all
+```
+
+**If running in PowerShell/CMD (fallback):**
 ```powershell
 & "C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project\.venv\Scripts\python.exe" "C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project\scripts\hermes_query.py" --sql "YOUR_SQL_QUERY"
 ```
-Or to get today's summary and timestamps directly:
-```powershell
-& "C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project\.venv\Scripts\python.exe" "C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project\scripts\hermes_query.py" --all
-```
-Always use `&` and wrap the python executable path and script path in double quotes because there is a space in `Coral Project`.
 
 ### 🛡️ Never Guess or Assume
 - **NEVER** reply to a health or behavior question without running the query first!
