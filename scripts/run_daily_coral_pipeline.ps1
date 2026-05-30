@@ -68,7 +68,7 @@ try {
 # --------------------------------------------------------------------
 try {
     Log-Message "Step 2: Transforming and validating StayFree Coral tables..."
-    python "$workspace\scripts\build_stayfree_coral_tables.py"
+    & "$workspace\.venv\Scripts\python.exe" "$workspace\scripts\build_stayfree_coral_tables.py"
     Log-Message "StayFree tables compiled successfully."
 } catch {
     Log-Message "Critical failure compiling StayFree tables: $_" "ERROR"
@@ -79,14 +79,14 @@ try {
 # STEP 3: Locate latest Health Connect export
 # --------------------------------------------------------------------
 Log-Message "Step 3: Checking Health Connect data sources..."
-python "$workspace\scripts\inspect_health_connect_db.py"
+& "$workspace\.venv\Scripts\python.exe" "$workspace\scripts\inspect_health_connect_db.py"
 
 # --------------------------------------------------------------------
 # STEP 4: Build Health Connect Daily
 # --------------------------------------------------------------------
 try {
     Log-Message "Step 4: Compiling Health Connect daily dataset..."
-    python "$workspace\scripts\build_health_coral_table.py"
+    & "$workspace\.venv\Scripts\python.exe" "$workspace\scripts\build_health_coral_table.py"
     Log-Message "health_daily table generated successfully."
 } catch {
     Log-Message "Critical failure generating health_daily: $_" "ERROR"
@@ -98,7 +98,7 @@ try {
 # --------------------------------------------------------------------
 try {
     Log-Message "Step 5: Executing master outer join for behavior_health_daily..."
-    python "$workspace\scripts\build_behavior_health_coral_table.py"
+    & "$workspace\.venv\Scripts\python.exe" "$workspace\scripts\build_behavior_health_coral_table.py"
     Log-Message "Master behavior_health_daily joined successfully!"
 } catch {
     Log-Message "Critical failure compiling master daily join: $_" "ERROR"

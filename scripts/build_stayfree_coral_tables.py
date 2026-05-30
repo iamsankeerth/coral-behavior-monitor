@@ -260,6 +260,12 @@ def build_tables():
                                     "raw_payload_available": "true",
                                     "data_quality_flags": "None"
                                 })
+                                
+                                # Prepare aggregates for stayfree_daily
+                                if date_ist not in daily_stats:
+                                    daily_stats[date_ist] = []
+                                daily_stats[date_ist].append(events[-1])
+                                
                                 parsed_count += 1
                             except Exception:
                                 pass
@@ -371,6 +377,133 @@ def build_tables():
                 daily_stats[date_ist] = []
             daily_stats[date_ist].append(events[-1])
             
+    # 3. Parse active sessions directly from Edge Browser History SQLite DB (Down-to-the-second real-time fallback)
+    edge_db_path = r"C:\Users\lenovo\AppData\Local\Microsoft\Edge\User Data\Default\History"
+    edge_parsed_count = 0
+    if os.path.exists(edge_db_path):
+        try:
+            import sqlite3
+            import shutil
+            from urllib.parse import urlparse
+            
+            # Copy to temp to prevent locks
+            temp_history_db = os.path.join(os.path.dirname(out_events_csv), "History.temp")
+            if os.path.exists(temp_history_db):
+                try: os.remove(temp_history_db)
+                except: pass
+                
+            shutil.copy2(edge_db_path, temp_history_db)
+            
+            conn = sqlite3.connect(temp_history_db)
+            cursor = conn.cursor()
+            
+            # Query last 15 days of history
+            CHROME_EPOCH = datetime(1601, 1, 1, tzinfo=timezone.utc)
+            ist = timezone(timedelta(hours=5, minutes=30))
+            now = datetime.now(ist)
+            start_date = now - timedelta(days=15)
+            # Chrome epoch start limit in microseconds
+            start_us = int((start_date.astimezone(timezone.utc) - CHROME_EPOCH).total_seconds() * 1_000_000)
+            
+            cursor.execute("""
+                SELECT urls.url, urls.title, visits.visit_time, visits.visit_duration
+                FROM visits JOIN urls ON visits.url = urls.id
+                WHERE visits.visit_time >= ?
+                  AND visits.visit_duration > 0;
+            """, (start_us,))
+            
+            rows = cursor.fetchall()
+            for url, title, visit_time, visit_duration in rows:
+                duration = visit_duration / 1_000_000.0 # Convert microseconds to seconds
+                if duration <= 0 or duration > 86400:
+                    continue
+                    
+                # Parse timestamp
+                dt_utc = CHROME_EPOCH + timedelta(microseconds=visit_time)
+                ts_utc_str = dt_utc.isoformat().replace("+00:00", "") + "Z"
+                
+                # Convert to IST
+                dt_ist = dt_utc.astimezone(ist)
+                date_ist = dt_ist.strftime("%Y-%m-%d")
+                hour_ist = dt_ist.hour
+                weekday_ist = dt_ist.weekday()
+                
+                # Parse domain
+                parsed_url = urlparse(url)
+                domain = parsed_url.netloc
+                if domain.startswith("www."):
+                    domain = domain[4:]
+                
+                domain_clean = domain
+                path_str = parsed_url.path
+                if "youtube.com" in domain and "shorts" in path_str:
+                    domain_clean = "youtube.com/shorts"
+                elif "instagram.com" in domain and "reels" in path_str:
+                    domain_clean = "instagram.com/reels"
+                    
+                platform = "web"
+                dedup_key = (ts_utc_str, domain_clean.lower().strip(), platform)
+                if dedup_key in dedup_set:
+                    continue
+                dedup_set.add(dedup_key)
+                
+                event_id = generate_event_id(ts_utc_str, domain_clean, platform, duration, "Edge History")
+                cat, sub = get_category_and_sub(domain_clean)
+                is_late = hour_ist >= 23 or hour_ist < 5
+                late_window = "None"
+                if is_late:
+                    if hour_ist >= 23 or hour_ist < 1:
+                        late_window = "23:00-01:00"
+                    elif hour_ist >= 1 and hour_ist < 3:
+                        late_window = "01:00-03:00"
+                    else:
+                        late_window = "03:00-05:00"
+                        
+                events.append({
+                    "event_id": event_id,
+                    "timestamp_utc": ts_utc_str,
+                    "timestamp_ist": dt_ist.isoformat(),
+                    "date_ist": date_ist,
+                    "hour_ist": hour_ist,
+                    "weekday_ist": weekday_ist,
+                    "platform": platform,
+                    "device_type": "PC-Windows",
+                    "domain_or_app": domain_clean,
+                    "app_or_domain_normalized": domain_clean.lower().strip(),
+                    "category": cat,
+                    "subcategory": sub,
+                    "duration_seconds": duration,
+                    "duration_minutes": round(duration / 60.0, 2),
+                    "is_web": "true",
+                    "is_android": "false",
+                    "is_late_night": "true" if is_late else "false",
+                    "late_night_window": late_window,
+                    "source": "Edge History",
+                    "raw_key": f"key-{event_id[:8]}",
+                    "raw_payload_available": "true",
+                    "data_quality_flags": "None"
+                })
+                
+                if date_ist not in daily_stats:
+                    daily_stats[date_ist] = []
+                daily_stats[date_ist].append(events[-1])
+                
+                edge_parsed_count += 1
+                
+            conn.close()
+            try: os.remove(temp_history_db)
+            except: pass
+        except Exception as e:
+            print(f"Error parsing Edge History: {e}")
+            if 'conn' in locals():
+                try: conn.close()
+                except: pass
+            if os.path.exists(temp_history_db):
+                try: os.remove(temp_history_db)
+                except: pass
+                
+    print(f"Successfully injected {edge_parsed_count} live sessions from Edge Browser History.")
+
     # Process stayfree_daily
     daily_rows = []
     for dt_key, day_events in sorted(daily_stats.items()):
