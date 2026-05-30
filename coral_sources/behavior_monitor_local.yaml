@@ -1,0 +1,264 @@
+# Coral Source Configuration for Local Personal Monitor
+name: behavior_monitor_local
+description: "Local database exposing StayFree screen metrics and Google Drive Health Connect entries."
+type: local
+
+config:
+  tables:
+    - name: stayfree_events
+      description: "Individual screen sessions showing active web focus and synced Android apps."
+      path: "C:/Users/lenovo/Desktop/San/Fun_Projects/Coral Project/data/coral/csv/stayfree_events.csv"
+      format: csv
+      schema:
+        columns:
+          - name: event_id
+            type: string
+          - name: timestamp_utc
+            type: string
+          - name: timestamp_ist
+            type: string
+          - name: date_ist
+            type: string
+          - name: hour_ist
+            type: int
+          - name: weekday_ist
+            type: int
+          - name: platform
+            type: string
+          - name: device_type
+            type: string
+          - name: domain_or_app
+            type: string
+          - name: app_or_domain_normalized
+            type: string
+          - name: category
+            type: string
+          - name: subcategory
+            type: string
+          - name: duration_seconds
+            type: double
+          - name: duration_minutes
+            type: double
+          - name: is_web
+            type: boolean
+          - name: is_android
+            type: boolean
+          - name: is_late_night
+            type: boolean
+          - name: late_night_window
+            type: string
+          - name: source
+            type: string
+          - name: raw_key
+            type: string
+          - name: raw_payload_available
+            type: boolean
+          - name: data_quality_flags
+            type: string
+
+    - name: stayfree_daily
+      description: "Daily aggregated screen stats (YouTube, Instagram, Social, Gaming, and focus metrics)."
+      path: "C:/Users/lenovo/Desktop/San/Fun_Projects/Coral Project/data/coral/csv/stayfree_daily.csv"
+      format: csv
+      schema:
+        columns:
+          - name: date_ist
+            type: string
+          - name: total_screen_seconds
+            type: double
+          - name: total_screen_minutes
+            type: double
+          - name: android_seconds
+            type: double
+          - name: android_minutes
+            type: double
+          - name: web_seconds
+            type: double
+          - name: web_minutes
+            type: double
+          - name: late_night_seconds
+            type: double
+          - name: late_night_minutes
+            type: double
+          - name: youtube_seconds
+            type: double
+          - name: youtube_minutes
+            type: double
+          - name: youtube_shorts_seconds_if_detected
+            type: double
+          - name: youtube_shorts_minutes_if_detected
+            type: double
+          - name: instagram_seconds
+            type: double
+          - name: instagram_minutes
+            type: double
+          - name: instagram_reels_seconds_if_detected
+            type: double
+          - name: instagram_reels_minutes_if_detected
+            type: double
+          - name: social_seconds
+            type: double
+          - name: social_minutes
+            type: double
+          - name: gaming_seconds
+            type: double
+          - name: gaming_minutes
+            type: double
+          - name: productivity_seconds
+            type: double
+          - name: productivity_minutes
+            type: double
+          - name: learning_seconds
+            type: double
+          - name: learning_minutes
+            type: double
+          - name: coding_seconds
+            type: double
+          - name: coding_minutes
+            type: double
+          - name: communication_seconds
+            type: double
+          - name: communication_minutes
+            type: double
+          - name: entertainment_seconds
+            type: double
+          - name: entertainment_minutes
+            type: double
+          - name: session_count
+            type: int
+          - name: android_session_count
+            type: int
+          - name: web_session_count
+            type: int
+          - name: top_app_or_domain
+            type: string
+          - name: top_category
+            type: string
+          - name: longest_session_seconds
+            type: double
+          - name: avg_session_seconds
+            type: double
+          - name: median_session_seconds
+            type: double
+          - name: first_event_ist
+            type: string
+          - name: last_event_ist
+            type: string
+          - name: reels_detection_confidence
+            type: string
+          - name: shorts_detection_confidence
+            type: string
+          - name: data_quality_flags
+            type: string
+
+    - name: health_daily
+      description: "Daily physical health aggregates (Steps, sleep stages, active workouts, and heart rate)."
+      path: "C:/Users/lenovo/Desktop/San/Fun_Projects/Coral Project/data/coral/csv/health_daily.csv"
+      format: csv
+      schema:
+        columns:
+          - name: date_ist
+            type: string
+          - name: steps_total
+            type: int
+          - name: sleep_minutes
+            type: double
+          - name: sleep_start_ist
+            type: string
+          - name: sleep_end_ist
+            type: string
+          - name: sleep_session_count
+            type: int
+          - name: awake_minutes_if_available
+            type: double
+          - name: light_sleep_minutes_if_available
+            type: double
+          - name: deep_sleep_minutes_if_available
+            type: double
+          - name: rem_sleep_minutes_if_available
+            type: double
+          - name: workout_minutes
+            type: double
+          - name: workout_count
+            type: int
+          - name: active_calories_if_available
+            type: double
+          - name: heart_rate_avg_if_available
+            type: double
+          - name: source_file
+            type: string
+          - name: data_quality_flags
+            type: string
+
+    - name: behavior_health_daily
+      description: "Master joined dataset for cross-source behavior-health analysis and focus ratio scores."
+      path: "C:/Users/lenovo/Desktop/San/Fun_Projects/Coral Project/data/coral/csv/behavior_health_daily.csv"
+      format: csv
+      schema:
+        columns:
+          - name: date_ist
+            type: string
+          - name: steps_total
+            type: int
+          - name: sleep_minutes
+            type: double
+          - name: sleep_start_ist
+            type: string
+          - name: sleep_end_ist
+            type: string
+          - name: sleep_session_count
+            type: int
+          - name: deep_sleep_minutes_if_available
+            type: double
+          - name: rem_sleep_minutes_if_available
+            type: double
+          - name: workout_minutes
+            type: double
+          - name: workout_count
+            type: int
+          - name: total_screen_minutes
+            type: double
+          - name: android_minutes
+            type: double
+          - name: web_minutes
+            type: double
+          - name: late_night_minutes
+            type: double
+          - name: youtube_minutes
+            type: double
+          - name: youtube_shorts_minutes_if_detected
+            type: double
+          - name: instagram_minutes
+            type: double
+          - name: instagram_reels_minutes_if_detected
+            type: double
+          - name: social_minutes
+            type: double
+          - name: gaming_minutes
+            type: double
+          - name: productivity_minutes
+            type: double
+          - name: learning_minutes
+            type: double
+          - name: coding_minutes
+            type: double
+          - name: session_count
+            type: int
+          - name: top_app_or_domain
+            type: string
+          - name: top_category
+            type: string
+          - name: focus_minutes
+            type: double
+          - name: leisure_minutes
+            type: double
+          - name: focus_ratio
+            type: double
+          - name: sleep_disruption_index
+            type: double
+          - name: previous_night_late_screen_minutes
+            type: double
+          - name: next_day_steps
+            type: int
+          - name: data_quality_flags
+            type: string
