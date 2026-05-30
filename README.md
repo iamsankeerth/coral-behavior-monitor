@@ -129,6 +129,45 @@ streamlit run app/app.py
 
 ---
 
+## ⚕️ Hermes WhatsApp AI Focus Agent Integration
+
+The project includes native integration with the **NousResearch Hermes Agent** to allow you to query your local Coral behavior metrics in natural language directly over WhatsApp, alongside an hourly background daemon that pushes stateful, escalating motivational messages if you are doomscrolling.
+
+### 1. WhatsApp Natural Language Interface
+Whenever you ask Hermes a question regarding your steps, screen time, focus, or YouTube history, it translates your natural language request into SQL and runs a local query bridge script against the Coral database:
+* 👟 **"How many steps did I take yesterday?"**
+* 🧠 **"Did I watch a lot of Reels today?"**
+* 💻 **"What is my time spent on YouTube today?"**
+
+#### Smart Formatting & Context Separation:
+* **PC vs. Mobile Split**: Clearly distinguishes **PC Data** (Microsoft Edge StayFree logs), **Mobile Screen data** (StayFree Android logs), and **Mobile Steps data** (Health Connect records).
+* **Context Filtering**: Dynamically detects the category of your question. Physical steps queries *only* show steps freshness; screen time queries *only* show screen sync times.
+* **Uniform Time Zone Mappings**: Standardizes all UTC timestamps to clean, readable local `YYYY-MM-DD HH:MM:SS (IST)` outputs.
+
+### 2. Stateful Escalation Notification Engine
+The hourly background daemon (`scripts/hermes_agent_bridge.py`) tracks active reels/shorts scrolling. If you cross your daily limits (e.g. 30 minutes of Reels/Shorts), it saves state at `data/logs/hermes_session_state.json` and pushes an increasingly deep warning message directly via `hermes send --to "whatsapp:iamsan"`:
+* 🟢 **Level 1 (Awareness)**: "Hey! Friendly check-in. You've crossed your Reels/Shorts limit today..."
+* 🟡 **Level 2 (Mindful Reframing)**: "You're still scrolling. Reels/Shorts are now at {minutes} mins. You are the creator..."
+* 🟠 **Level 3 (Focus Alignment)**: "Reels/Shorts have hit {minutes} mins. Every minute scrolling is a minute taken..."
+* 🔴 **Level 4 (Philosophical Depth)**: "Attention: You spent {minutes} mins scrolling today. Time is your only non-renewable resource..."
+* 🔥 **Level 5 (Ultimate Guardian)**: "Reels/Shorts have exceeded {minutes} mins. Close Edge, put down your phone, and build..."
+
+### 3. Setup and Execution:
+Make sure your Hermes agent gateway is running.
+
+```powershell
+# Run the query bridge manually
+& ".venv/Scripts/python.exe" "scripts/hermes_query.py" --all
+
+# Register rules into Hermes SOUL.md system prompt
+& ".venv/Scripts/python.exe" "scripts/update_session_prompts.py"
+
+# Restart your local Hermes gateway to clear cache
+hermes gateway restart
+```
+
+---
+
 ## 🛡️ Privacy and Safety Assurance
 * **100% Local**: No raw browsing logs, precise GPS/step paths, or sensitive sleep states are ever uploaded to external cloud services.
 * **No Causation Claimed**: All diagnostics are framed as statistical correlations and associations, preventing assertions of medical diagnosis.

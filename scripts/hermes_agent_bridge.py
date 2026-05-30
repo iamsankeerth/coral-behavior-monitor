@@ -2,8 +2,6 @@ import os
 import csv
 import json
 import subprocess
-import urllib.request
-import urllib.parse
 from datetime import datetime
 
 # Path Configurations
@@ -48,10 +46,9 @@ def load_config():
     if os.path.exists(config_file):
         with open(config_file, 'r', encoding='utf-8') as f:
             return json.load(f)
-    # Default placeholder config
+    # Default native Hermes config
     default_config = {
-        "whatsapp_phone": "+91XXXXXXXXXX",  # e.g., +919876543210
-        "whatsapp_apikey": "YOUR_CALLMEBOT_API_KEY",  # Get free key from callmebot.com
+        "whatsapp_target": "whatsapp:iamsan",  # Matches your registered TUI target
         "reels_shorts_limit": REELS_SHORTS_LIMIT,
         "total_screen_limit": TOTAL_SCREEN_LIMIT
     }
@@ -73,28 +70,29 @@ def run_pipeline():
     except Exception as e:
         return False, str(e)
 
-def send_whatsapp(phone, text, apikey):
-    if apikey == "YOUR_CALLMEBOT_API_KEY" or not phone or "XXXX" in phone:
-        return False, "Placeholder config: Please add your real phone number and WhatsApp API key in config/hermes_config.json"
+def send_via_hermes(target, text):
+    if not target:
+        return False, "Delivery target is empty."
         
-    # URL Encode message
-    encoded_text = urllib.parse.quote(text)
-    # CallMeBot WhatsApp Gateway URL
-    url = f"https://api.callmebot.com/whatsapp.php?phone={phone}&text={encoded_text}&apikey={apikey}"
-    
     try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=10) as response:
-            html = response.read().decode('utf-8')
-            if "Message sent" in html or response.status == 200:
-                return True, "WhatsApp sent successfully via CallMeBot!"
-            return False, f"Gateway response: {html}"
+        # Run the native hermes send command
+        res = subprocess.run(
+            ["hermes", "send", "--to", target, text],
+            shell=True,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return True, "Message delivered successfully via Hermes CLI!"
+    except subprocess.CalledProcessError as e:
+        return False, f"Hermes CLI error (Exit Code {e.returncode}): {e.stderr.strip() or e.stdout.strip()}"
     except Exception as e:
-        return False, f"Failed to connect to WhatsApp gateway: {e}"
+        return False, f"Failed to invoke Hermes executable: {e}"
 
 def main():
     config = load_config()
     limit = config.get("reels_shorts_limit", REELS_SHORTS_LIMIT)
+    target = config.get("whatsapp_target", "whatsapp:iamsan")
     
     # 1. Update data
     success, log_out = run_pipeline()
@@ -161,12 +159,8 @@ def main():
         selected_msg = msg_template["message"].format(minutes=total_reels_shorts)
         style = msg_template["style"]
         
-        # Send Push Notification via WhatsApp
-        w_success, w_status = send_whatsapp(
-            config.get("whatsapp_phone"),
-            selected_msg,
-            config.get("whatsapp_apikey")
-        )
+        # Send Push Notification via Hermes CLI Native Gateway
+        w_success, w_status = send_via_hermes(target, selected_msg)
         whatsapp_sent = w_success
         whatsapp_status = w_status
         
