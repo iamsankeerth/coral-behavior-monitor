@@ -1,0 +1,18 @@
+# Python virtual environment
+.venv/
+__pycache__/
+*.pyc
+
+# Node dependencies
+node_modules/
+package-lock.json
+
+# Temporary/Backup files
+stayfree_temp_copy/
+extracted_stayfree_data.json
+stayfree_raw_dump.json
+
+# System files
+.antigravitycli/
+.DS_Store
+Thumbs.db

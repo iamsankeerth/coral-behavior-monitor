@@ -1,0 +1,5 @@
+timezone: Asia/Kolkata
+health_connect_export_folder: "C:/Users/lenovo/Desktop/San/Fun_Projects/Coral Project/data/raw/health_connect"
+health_connect_latest_file_pattern: "Health Connect*.zip"
+edge_profile_path: "C:/Users/lenovo/AppData/Local/Microsoft/Edge/User Data/Default"
+stayfree_extension_id: "elfaihghhjjoknimpccccmkioofjjfkf"
