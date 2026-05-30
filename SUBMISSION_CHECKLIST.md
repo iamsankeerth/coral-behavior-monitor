@@ -5,7 +5,7 @@ Use this checklist to verify your final submission for the **WeMakeDevs Coral Ha
 ---
 
 ## 🚀 Required Submission Links
-* [ ] **GitHub Repository Link**: `https://github.com/[YOUR_USERNAME]/coral-behavior-health-monitor`
+* [ ] **GitHub Repository Link**: `https://github.com/iamsankeerth/coral-behavior-monitor`
 * [ ] **Deployed Dashboard Link**: `https://coral-behavior-health-monitor.streamlit.app/`
 * [ ] **YouTube Demo Video (Under 3 mins)**: `https://youtu.be/[YOUR_VIDEO_ID]`
 
