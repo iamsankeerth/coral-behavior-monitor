@@ -3,6 +3,6 @@
   "data_source": "REAL_DATABASE",
   "processed_days": 62,
   "steps_average": 13251.11,
-  "sleep_average_min": 410.26,
+  "sleep_average_min": 0.0,
   "total_workouts": 11
 }

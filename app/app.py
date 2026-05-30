@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime
+import numpy as np
 
 # Configure Premium Web Page
 st.set_page_config(
@@ -20,7 +20,7 @@ st.markdown("""
     }
     .main-header {
         font-family: 'Outfit', sans-serif;
-        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        background: linear-gradient(135deg, #FF6B5A 0%, #ff4b36 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 800;
@@ -33,6 +33,10 @@ st.markdown("""
         border: 1px solid #334155;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
+    .footnote {
+        font-size: 0.85rem;
+        color: #94a3b8;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -42,7 +46,7 @@ master_csv = os.path.join(workspace, "data", "coral", "csv", "behavior_health_da
 events_csv = os.path.join(workspace, "data", "coral", "csv", "stayfree_events.csv")
 
 st.markdown('<h1 class="main-header">🕸️ Coral Personal Behavior & Health Monitor</h1>', unsafe_allow_html=True)
-st.markdown("### Hackathon Submission for WeMakeDevs Coral Hackathon")
+st.markdown("### Privacy-First Analytics Pipeline — Custom No-Assumption Build")
 st.markdown("---")
 
 if not os.path.exists(master_csv):
@@ -61,30 +65,39 @@ st.sidebar.markdown("**StayFree extension ID**:")
 st.sidebar.code("elfaihghhjjoknimpccccmkioofjjfkf")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🔒 Privacy Promise")
-st.sidebar.success("All steps, sleep session records, and browsing events remain strictly sandboxed inside your local machine. Coral reasons locally.")
+st.sidebar.markdown("### 🔒 Strict Privacy Promise")
+st.sidebar.success("No assumptions or mock datasets are integrated. All missing physical values are represented strictly as N/A with source footnotes.")
 
 # Top-level Metric Dashboard Cards
 st.markdown("## 📊 Personal Screen-Time & Vitals Summary")
 col1, col2, col3, col4, col5 = st.columns(5)
 
 total_days = len(df)
-avg_sleep = df["sleep_minutes"].mean() / 60.0 if "sleep_minutes" in df else 7.5
-avg_steps = df["steps_total"].mean() if "steps_total" in df else 6500.0
-avg_screen = df["total_screen_minutes"].mean() if "total_screen_minutes" in df else 240.0
-late_screen = df["late_night_minutes"].mean() if "late_night_minutes" in df else 15.0
+
+# Check and extract real values strictly
+has_sleep = "sleep_minutes" in df and df["sleep_minutes"].dropna().notempty if hasattr(df["sleep_minutes"], 'dropna') else False
+avg_sleep = df["sleep_minutes"].dropna().mean() / 60.0 if "sleep_minutes" in df and not df["sleep_minutes"].dropna().empty else None
+
+avg_steps = df["steps_total"].mean() if "steps_total" in df else 0
+avg_screen = df["total_screen_minutes"].mean() if "total_screen_minutes" in df else 0
+late_screen = df["late_night_minutes"].mean() if "late_night_minutes" in df else 0
 
 with col1:
     st.metric("Tracking Window", f"{total_days} Days", "Active IST")
 with col2:
-    st.metric("Avg. Steps Taken", f"{int(avg_steps):,} steps", "+4.2% vs last week")
+    st.metric("Avg. Steps Taken", f"{int(avg_steps):,} steps", "Real SQLite DB")
 with col3:
-    st.metric("Avg. Sleep Duration", f"{avg_sleep:.2f} Hours", "78% Quality")
+    if avg_sleep is not None and not np.isnan(avg_sleep):
+        st.metric("Avg. Sleep Duration", f"{avg_sleep:.2f} Hours")
+    else:
+        st.metric("Avg. Sleep Duration", "N/A*", "*Empty source table")
 with col4:
-    st.metric("Avg. Screen Focus", f"{avg_screen/60.0:.2f} Hours", "-12 min today")
+    st.metric("Avg. Screen Focus", f"{avg_screen/60.0:.2f} Hours", "StayFree LevelDB")
 with col5:
     st.metric("Avg. Late-Night Screen", f"{int(late_screen)} min", "11:00 PM - 5:00 AM")
 
+# Footnote Explanation
+st.markdown('<p class="footnote"><i>*N/A: Sleep session logs were completely empty in your source Health Connect database backup (meaning no sleep data is registered in your Google Drive folder). No simulated assumptions are used.</i></p>', unsafe_allow_html=True)
 st.markdown("---")
 
 # Analytics Tabs
@@ -97,14 +110,15 @@ with tab1:
     
     with col_ins1:
         st.markdown("#### 🚫 Did Late-Night Screen Time Affect Sleep?")
-        st.write("Using Coral cross-source joins, we matched late-night browsing durations against sleep hours.")
-        # Plot sleep disruption index
+        st.write("Cross-source SQL query analyzing late-night browsing durations against sleep lengths:")
+        
         df_sleep_dis = df[["date_ist", "sleep_minutes", "late_night_minutes"]].dropna()
-        df_sleep_dis["sleep_hours"] = df_sleep_dis["sleep_minutes"] / 60.0
-        
-        st.line_chart(df_sleep_dis.set_index("date_ist")[["sleep_hours", "late_night_minutes"]])
-        st.caption("Matched data demonstrates a clear correlation: Days with peak late-night screen minutes correspond with significant declines in sleep hours.")
-        
+        if not df_sleep_dis.empty:
+            df_sleep_dis["sleep_hours"] = df_sleep_dis["sleep_minutes"] / 60.0
+            st.line_chart(df_sleep_dis.set_index("date_ist")[["sleep_hours", "late_night_minutes"]])
+        else:
+            st.warning("⚠️ **Sleep Data is N/A***: No sleep logs exist in your source SQLite database. To view this graph, connect a sleep tracking wearable (Fitbit/Oura/Whoop) to sync sleep sessions to Google Health Connect.")
+            
     with col_ins2:
         st.markdown("#### 🏃 Workout Days vs. Passive Screen Time")
         st.write("Does physical exercise reduce digital screen focus?")
@@ -113,7 +127,7 @@ with tab1:
         df_workout["total_screen_hours"] = df_workout["total_screen_minutes"] / 60.0
         
         st.bar_chart(df_workout.set_index("date_ist")[["total_screen_hours", "workout_minutes"]])
-        st.caption("Active exercise durations (in minutes) are inversely associated with desktop & mobile screen focus.")
+        st.caption("Active exercise durations (in minutes) logged in your SQLite DB are matched against browser screen focus.")
 
 with tab2:
     st.markdown("### 💻 Productivity & Passive Consumption (Focus Ratio)")

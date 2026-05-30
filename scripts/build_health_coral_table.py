@@ -2,8 +2,7 @@ import os
 import csv
 import json
 import sqlite3
-import random
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 # Define target paths
 db_path = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project\data\raw\health_connect\health_connect_export.db"
@@ -24,33 +23,17 @@ def generate_health_data():
     print("Generating daily Health Connect dataset...")
     
     # 1. Read dates from stayfree_daily.csv to sync boundaries
-    stayfree_dates = set()
     dates_screen = []
     if os.path.exists(stayfree_daily_csv):
         with open(stayfree_daily_csv, "r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                stayfree_dates.add(row["date_ist"])
-                dates_screen.append({
-                    "date_ist": row["date_ist"],
-                    "total_screen_min": float(row["total_screen_minutes"]),
-                    "late_night_min": float(row["late_night_minutes"]),
-                    "gaming_min": float(row["gaming_minutes"]),
-                    "youtube_min": float(row["youtube_minutes"])
-                })
+                dates_screen.append(row["date_ist"])
     else:
         # Fallback date list
-        base_date = datetime.now() - timedelta(days=62)
+        base_date = datetime.now() - 62
         for i in range(62):
-            date_str = (base_date + timedelta(days=i)).strftime("%Y-%m-%d")
-            stayfree_dates.add(date_str)
-            dates_screen.append({
-                "date_ist": date_str,
-                "total_screen_min": 240.0,
-                "late_night_min": 10.0,
-                "gaming_min": 0.0,
-                "youtube_min": 20.0
-            })
+            dates_screen.append((base_date + i).strftime("%Y-%m-%d"))
 
     # Initialize data structures for real database parsing
     real_steps = {}
@@ -97,97 +80,60 @@ def generate_health_data():
             use_real_db = True
             print(f"Successfully aggregated real metrics for {len(real_steps)} distinct days!")
         except Exception as e:
-            print(f"Warning: Failed to parse SQLite DB: {e}. Falling back to sandbox generator...")
+            print(f"Warning: Failed to parse SQLite DB: {e}. Falling back to clean empty sets...")
             use_real_db = False
 
     health_rows = []
-    random.seed(42) # keeps mock aspects stable
     
-    # 3. Assemble unified health rows
-    for day in dates_screen:
-        dt_str = day["date_ist"]
-        screen_min = day["total_screen_min"]
-        late_min = day["late_night_min"]
+    # 3. Assemble unified health rows without any assumption data
+    for dt_str in dates_screen:
+        # Steps
+        steps_total = real_steps.get(dt_str, 0) if use_real_db else 0
         
-        # Mapped or simulated Sleep duration (since sleep has 0 rows in user DB)
-        base_sleep = 480.0
-        sleep_reduction = late_min * 0.8 + random.uniform(-30, 20)
-        sleep_min = max(240.0, min(600.0, base_sleep - sleep_reduction))
+        # Workouts
+        w_info = real_workouts.get(dt_str, {"minutes": 0.0, "count": 0}) if use_real_db else {"minutes": 0.0, "count": 0}
+        workout_min = round(w_info["minutes"], 2)
+        workout_cnt = w_info["count"]
         
-        deep_min = sleep_min * 0.20 + (random.uniform(-10, 10) - (late_min * 0.1))
-        rem_min = sleep_min * 0.22 + random.uniform(-15, 10)
-        light_min = sleep_min - deep_min - rem_min - 15.0
-        awake_min = 15.0 + (late_min * 0.05) + random.uniform(-5, 15)
+        # Calories
+        calories_val = round(real_calories.get(dt_str, 0.0), 2) if use_real_db else 0.0
+        calories = calories_val if calories_val > 0.0 else "" # Set empty if not found
         
-        sleep_start_hour = 23
-        sleep_start_min = int(30 + (late_min * 0.5) + random.uniform(-20, 20))
-        if sleep_start_min >= 60:
-            sleep_start_hour += sleep_start_min // 60
-            sleep_start_min = sleep_start_min % 60
-        sleep_start_hour = sleep_start_hour % 24
+        # All sleep, heart rate, and missing metrics are set to empty (N/A)
+        sleep_minutes = ""
+        sleep_start_ist = ""
+        sleep_end_ist = ""
+        sleep_session_count = 0
+        awake_minutes = ""
+        light_sleep_minutes = ""
+        deep_sleep_minutes = ""
+        rem_sleep_minutes = ""
+        heart_rate_avg = ""
         
-        sleep_start_dt = datetime.strptime(f"{dt_str} {sleep_start_hour:02d}:{sleep_start_min:02d}", "%Y-%m-%d %H:%M")
-        if sleep_start_hour >= 20:
-            sleep_start_dt = sleep_start_dt - timedelta(days=1)
-        sleep_end_dt = sleep_start_dt + timedelta(minutes=sleep_min)
+        source_info = "Real Health Connect SQLite DB" if use_real_db else "No Database Connected"
         
-        if use_real_db:
-            # Inject REAL metrics from SQLite database (if missing, default to 0)
-            steps_total = real_steps.get(dt_str, 0)
-            
-            w_info = real_workouts.get(dt_str, {"minutes": 0.0, "count": 0})
-            workout_min = round(w_info["minutes"], 2)
-            workout_cnt = w_info["count"]
-            
-            calories = round(real_calories.get(dt_str, 0.0), 2)
-            if calories == 0.0:
-                # If calorie record is missing, fall back to metabolic estimation
-                calories = 1500.0 + random.uniform(100, 400) + (workout_min * 8.5)
-                
-            hr_avg = round(65.0 + (steps_total * 0.0005) + random.uniform(-3, 3), 2)
-            source_info = "Real Health Connect SQLite DB"
-        else:
-            # Fall back to high-fidelity sandbox generation
-            is_workout_day = random.random() < 0.35
-            workout_min = 0.0
-            workout_cnt = 0
-            calories = 1500.0 + random.uniform(100, 400)
-            
-            if is_workout_day:
-                workout_min = round(random.uniform(30.0, 90.0), 2)
-                workout_cnt = 1
-                calories += workout_min * 8.5
-                
-            base_steps = 6000.0
-            steps_reduction = screen_min * 8.0
-            steps_boost = workout_min * 100.0 if workout_min > 0 else 0.0
-            steps_total = int(max(1500.0, min(18000.0, base_steps - steps_reduction + steps_boost + random.uniform(-1000, 2000))))
-            hr_avg = round(65.0 + (steps_total * 0.0005) + random.uniform(-3, 3), 2)
-            source_info = "Health Connect Google Drive Sandbox"
-            
-        dq_flags = []
+        # Data Quality Flags - Explaining the exact reason for N/A with an asterisk
+        dq_flags = ["*N/A: Sleep session and heart rate tables were completely empty in your source Health Connect database"]
         if steps_total < 3000:
             dq_flags.append("SEDENTARY_DAY")
-        if sleep_min < 360:
-            dq_flags.append("SLEEP_DEPRIVED")
             
         health_rows.append({
             "date_ist": dt_str,
             "steps_total": steps_total,
-            "sleep_minutes": round(sleep_min, 2),
-            "sleep_start_ist": sleep_start_dt.isoformat() + "+05:30",
-            "sleep_end_ist": sleep_end_dt.isoformat() + "+05:30",
-            "sleep_session_count": 1 if sleep_min > 0 else 0,
-            "awake_minutes_if_available": round(awake_min, 2),
-            "light_sleep_minutes_if_available": round(light_min, 2),
-            "deep_sleep_minutes_if_available": round(deep_min, 2),
-            "rem_sleep_minutes_if_available": round(rem_min, 2),
+            "sleep_minutes": sleep_minutes,
+            "sleep_start_ist": sleep_start_ist,
+            "sleep_end_ist": sleep_end_ist,
+            "sleep_session_count": sleep_session_count,
+            "awake_minutes_if_available": awake_minutes,
+            "light_sleep_minutes_if_available": light_sleep_minutes,
+            "deep_sleep_minutes_if_available": deep_sleep_minutes,
+            "rem_sleep_minutes_if_available": rem_sleep_minutes,
             "workout_minutes": workout_min,
             "workout_count": workout_cnt,
-            "active_calories_if_available": round(calories, 2),
-            "heart_rate_avg_if_available": hr_avg,
+            "active_calories_if_available": calories,
+            "heart_rate_avg_if_available": heart_rate_avg,
             "source_file": source_info,
-            "data_quality_flags": ";".join(dq_flags) if dq_flags else "None"
+            "data_quality_flags": ";".join(dq_flags)
         })
 
     # Write CSV and JSONL
@@ -204,10 +150,10 @@ def generate_health_data():
     # validation summary
     validation = {
         "status": "SUCCESS",
-        "data_source": "REAL_DATABASE" if use_real_db else "SANDBOX",
+        "data_source": "REAL_DATABASE" if use_real_db else "SANDBOX_EMPTY",
         "processed_days": len(health_rows),
         "steps_average": round(sum(h["steps_total"] for h in health_rows) / len(health_rows), 2),
-        "sleep_average_min": round(sum(h["sleep_minutes"] for h in health_rows) / len(health_rows), 2),
+        "sleep_average_min": 0.0,
         "total_workouts": sum(h["workout_count"] for h in health_rows)
     }
     
@@ -223,12 +169,12 @@ This report summarizes the daily physical health aggregates generated in the **H
 * **Data Source**: **{validation["data_source"]}**
 * **Processed Days**: **{len(health_rows)}** (Aligned with StayFree dates)
 * **Average Daily Steps**: **{validation["steps_average"]}** steps
-* **Average Daily Sleep**: **{validation["sleep_average_min"] / 60.0:.2f}** hours ({validation["sleep_average_min"]} minutes)
+* **Average Daily Sleep**: **N/A** (*Sleep table empty in source DB)
 * **Total Workout Sessions**: **{validation["total_workouts"]}** active exercises logged
 
 ## 🛡️ Pipeline Mappings
-* **Real SQLite Integration**: Steps, logged workouts, and daily calorie totals parsed from standard Health Connect SQLite tables.
-* **Correlated Sleep Modeling**: Correlated sleep metrics modeled against StayFree late-night screen times where sleep sessions are blank in source.
+* **Real SQLite Integration**: Steps and logged workouts parsed.
+* **No Assumptions Policy**: Sleep phases, heart rates, and missing calorie values are kept empty (*N/A) with corresponding quality footnotes.
 """
     with open(report_md_path, "w", encoding="utf-8") as rm:
         rm.write(report_md)

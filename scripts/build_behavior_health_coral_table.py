@@ -59,9 +59,9 @@ def build_master_table():
         # Extract direct metrics
         steps = hl.get("steps_total", "")
         sleep_min = hl.get("sleep_minutes", "")
-        sleep_start = hl.get("sleep_start_ist", "N/A")
-        sleep_end = hl.get("sleep_end_ist", "N/A")
-        sleep_session = hl.get("sleep_session_count", "")
+        sleep_start = hl.get("sleep_start_ist", "")
+        sleep_end = hl.get("sleep_end_ist", "")
+        sleep_session = hl.get("sleep_session_count", 0)
         deep_sleep = hl.get("deep_sleep_minutes_if_available", "")
         rem_sleep = hl.get("rem_sleep_minutes_if_available", "")
         workout_min = hl.get("workout_minutes", "")
@@ -96,21 +96,27 @@ def build_master_table():
                 (float(gaming_min) if gaming_min else 0.0) + \
                 (float(sf.get("entertainment_minutes", 0.0)) if sf else 0.0)
                 
-        focus_ratio = f_min / max(l_min, 1.0)
+        focus_ratio = round(f_min / max(l_min, 1.0), 3)
         
-        sleep_val = float(sleep_min) if sleep_min else 0.0
-        late_val = float(late_night_min) if late_night_min else 0.0
-        sleep_disruption = late_val / max(sleep_val, 1.0)
-        
+        # Check sleep disruption index - strictly N/A if sleep_min is empty
+        if sleep_min and sleep_min != "":
+            sleep_val = float(sleep_min)
+            late_val = float(late_night_min) if late_night_min else 0.0
+            sleep_disruption = round(late_val / max(sleep_val, 1.0), 3)
+        else:
+            sleep_disruption = "" # N/A
+            
         prev_night_late = float(prev_sf.get("late_night_minutes", 0.0)) if prev_sf else 0.0
         
-        next_day_steps_val = next_hl.get("steps_total", "")
+        next_day_steps_val = next_hl.get("steps_total", "") if next_hl else ""
         
-        # Data Quality Flags
+        # Data Quality Flags - Preserve exact asterisk reasons
         dq_flags = []
         if not sf:
             dq_flags.append("MISSING_STAYFREE_DATA")
-        if not hl:
+        if hl:
+            dq_flags.append(hl.get("data_quality_flags", "None"))
+        else:
             dq_flags.append("MISSING_HEALTH_CONNECT_DATA")
             
         master_rows.append({
@@ -142,8 +148,8 @@ def build_master_table():
             "top_category": top_cat,
             "focus_minutes": round(f_min, 2),
             "leisure_minutes": round(l_min, 2),
-            "focus_ratio": round(focus_ratio, 3),
-            "sleep_disruption_index": round(sleep_disruption, 3),
+            "focus_ratio": focus_ratio,
+            "sleep_disruption_index": sleep_disruption,
             "previous_night_late_screen_minutes": round(prev_night_late, 2),
             "next_day_steps": next_day_steps_val,
             "data_quality_flags": ";".join(dq_flags) if dq_flags else "None"
@@ -185,7 +191,7 @@ This report summarizes the outer join and feature mapping executed between **Sta
 
 ## 🛡️ Non-Causative Correlation & Integrity Rules
 * **No Medical Causation Claimed**: All analyses use correlative, descriptive, and matched language.
-* **Derived Index Mapping**: Mapped `focus_ratio` (Focus/Leisure), `sleep_disruption_index` (Late-night/Sleep duration), and shifted next-day steps and previous-night screen time.
+* **No Assumption Mappings**: Sleep metrics and derived indices are flagged with an asterisk explaining the empty database tables.
 """
     with open(report_md_path, "w", encoding="utf-8") as rm:
         rm.write(report_md)

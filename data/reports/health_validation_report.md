@@ -6,9 +6,9 @@ This report summarizes the daily physical health aggregates generated in the **H
 * **Data Source**: **REAL_DATABASE**
 * **Processed Days**: **62** (Aligned with StayFree dates)
 * **Average Daily Steps**: **13251.11** steps
-* **Average Daily Sleep**: **6.84** hours (410.26 minutes)
+* **Average Daily Sleep**: **N/A** (*Sleep table empty in source DB)
 * **Total Workout Sessions**: **11** active exercises logged
 
 ## 🛡️ Pipeline Mappings
-* **Real SQLite Integration**: Steps, logged workouts, and daily calorie totals parsed from standard Health Connect SQLite tables.
-* **Correlated Sleep Modeling**: Correlated sleep metrics modeled against StayFree late-night screen times where sleep sessions are blank in source.
+* **Real SQLite Integration**: Steps and logged workouts parsed.
+* **No Assumptions Policy**: Sleep phases, heart rates, and missing calorie values are kept empty (*N/A) with corresponding quality footnotes.
