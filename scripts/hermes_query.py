@@ -2,6 +2,7 @@ import os
 import sys
 import sqlite3
 import argparse
+import subprocess
 import pandas as pd
 from datetime import datetime
 
@@ -22,6 +23,20 @@ def format_ist_timestamp(ts_str):
         return dt.strftime("%Y-%m-%d %H:%M:%S (IST)")
     except Exception:
         return ts_str
+
+def run_live_pipeline():
+    try:
+        pipeline_script = os.path.join(workspace, "scripts", "run_daily_coral_pipeline.ps1")
+        # Run PowerShell pipeline synchronously to pull the freshest files before querying
+        subprocess.run(
+            ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", pipeline_script],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+    except Exception:
+        # Proceed gracefully if pipeline execution fails or edge is locked
+        pass
 
 def get_steps_timestamp():
     if not os.path.exists(health_connect_db):
@@ -113,12 +128,19 @@ def main():
         pass
     parser = argparse.ArgumentParser(description="Hermes Local Behavior-Health SQL Query Bridge")
     parser.add_argument("--sql", type=str, help="Arbitrary SQL query to execute against the behavior_health_daily table")
-    parser.add_argument("--timestamps", type=str, choices=["all", "physical", "mental"], default="all", help="Fetch live sync timestamps")
+    parser.add_argument("--timestamps", type=str, choices=["all", "physical", "mental"], help="Fetch live sync timestamps")
     parser.add_argument("--all", action="store_true", help="Print summary of today's behavior & sync timestamps")
     
     args = parser.parse_args()
     
+    if args.timestamps:
+        print_timestamps(args.timestamps)
+        return
+
     if args.all:
+        # Run pipeline first to sync the absolute freshest records
+        run_live_pipeline()
+        
         print("### Today's Vitals & Screen Time Summary")
         print("-" * 50)
         # Execute query for today's row
@@ -131,6 +153,9 @@ def main():
         return
 
     if args.sql:
+        # Run pipeline first to sync the absolute freshest records
+        run_live_pipeline()
+        
         # Run SQL query and output results
         result = execute_sql(args.sql)
         print(result)

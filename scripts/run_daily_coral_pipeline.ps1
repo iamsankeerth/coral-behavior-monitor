@@ -28,33 +28,26 @@ Log-Message "Starting Coral Behavior-Health Daily Pipeline..."
 # STEP 1: Refresh StayFree Extraction
 # --------------------------------------------------------------------
 Log-Message "Step 1: Attempting to copy latest StayFree database..."
-$edgeProcess = Get-Process -Name "msedge" -ErrorAction SilentlyContinue
-
-if ($edgeProcess) {
-    Log-Message "Microsoft Edge is currently open. DB locks may be active." "WARN"
-    Log-Message "Gracefully proceeding using existing stayfree_clean_analytics.csv sandbox backup." "WARN"
-} else {
-    try {
-        Log-Message "Copying active database files..."
-        $src = "$env:USERPROFILE\AppData\Local\Microsoft\Edge\User Data\Default\Local Extension Settings\elfaihghhjjoknimpccccmkioofjjfkf"
-        $dst = "$workspace\stayfree_temp_copy"
+try {
+    $src = "$env:USERPROFILE\AppData\Local\Microsoft\Edge\User Data\Default\Local Extension Settings\elfaihghhjjoknimpccccmkioofjjfkf"
+    $dst = "$workspace\stayfree_temp_copy"
+    
+    if (Test-Path $src) {
+        Log-Message "Copying active database files (excluding locks)..."
+        if (Test-Path $dst) { Remove-Item $dst -Recurse -Force }
+        New-Item -ItemType Directory -Path $dst -Force | Out-Null
+        Copy-Item -Path "$src\*" -Destination $dst -Exclude "LOCK" -Force
+        Log-Message "StayFree database files successfully duplicated to stayfree_temp_copy."
         
-        if (Test-Path $src) {
-            if (Test-Path $dst) { Remove-Item $dst -Recurse -Force }
-            New-Item -ItemType Directory -Path $dst -Force | Out-Null
-            Copy-Item -Path "$src\*" -Destination $dst -Exclude "LOCK" -Force
-            Log-Message "StayFree database files successfully duplicated to stayfree_temp_copy."
-            
-            # Execute extractor
-            Log-Message "Executing extract_stayfree.js to refresh CSV..."
-            node "$workspace\extract_stayfree.js" | Out-Null
-            Log-Message "StayFree CSV refreshed successfully."
-        } else {
-            Log-Message "StayFree local extension directory not found. Proceeding with backup CSV." "WARN"
-        }
-    } catch {
-        Log-Message "Failed to refresh StayFree extraction: $_. Proceeding with backup CSV." "WARN"
+        # Execute extractor
+        Log-Message "Executing extract_stayfree.js to refresh CSV..."
+        node "$workspace\extract_stayfree.js" | Out-Null
+        Log-Message "StayFree CSV refreshed successfully."
+    } else {
+        Log-Message "StayFree local extension directory not found. Proceeding with backup CSV." "WARN"
     }
+} catch {
+    Log-Message "Failed to copy active StayFree database: $_. Proceeding with backup CSV." "WARN"
 }
 
 # --------------------------------------------------------------------
