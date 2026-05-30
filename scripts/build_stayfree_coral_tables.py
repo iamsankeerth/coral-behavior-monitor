@@ -3,7 +3,7 @@ import csv
 import json
 import hashlib
 import yaml
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # Define target paths
 raw_csv_path = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project\stayfree_clean_analytics.csv"
@@ -74,6 +74,75 @@ def generate_event_id(ts_utc, domain, plat, dur, src):
     raw_str = f"{ts_utc}_{domain}_{plat}_{dur}_{src}"
     return hashlib.md5(raw_str.encode('utf-8')).hexdigest()
 
+# --------------------------------------------------------------------
+# PURE-PYTHON CHROMIUM INDEXEDDB LEVELDB LOG PARSER
+# --------------------------------------------------------------------
+import struct
+
+def read_varint32(data, offset):
+    result = 0
+    shift = 0
+    while offset < len(data):
+        byte = data[offset]
+        offset += 1
+        result |= (byte & 0x7f) << shift
+        if not (byte & 0x80):
+            break
+        shift += 7
+    return result, offset
+
+def parse_write_batch(payload):
+    if len(payload) < 12:
+        return []
+    seq, count = struct.unpack("<QI", payload[:12])
+    offset = 12
+    records = []
+    for _ in range(count):
+        if offset >= len(payload):
+            break
+        rec_type = payload[offset]
+        offset += 1
+        if rec_type == 1: # Put
+            key_len, offset = read_varint32(payload, offset)
+            key = payload[offset:offset+key_len]
+            offset += key_len
+            val_len, offset = read_varint32(payload, offset)
+            val = payload[offset:offset+val_len]
+            offset += val_len
+            records.append(('PUT', key, val))
+        elif rec_type == 2: # Delete
+            key_len, offset = read_varint32(payload, offset)
+            key = payload[offset:offset+key_len]
+            offset += key_len
+            records.append(('DELETE', key, None))
+    return records
+
+def parse_log_file(filepath):
+    block_size = 32768
+    if not os.path.exists(filepath):
+        return
+    with open(filepath, "rb") as f:
+        while True:
+            block = f.read(block_size)
+            if not block:
+                break
+            offset = 0
+            while offset + 7 <= len(block):
+                crc, length, rec_type = struct.unpack("<IHB", block[offset:offset+7])
+                if rec_type == 0 and length == 0:
+                    break
+                offset += 7
+                if offset + length > len(block):
+                    break
+                payload = block[offset:offset+length]
+                offset += length
+                if rec_type == 1: # FULL record
+                    try:
+                        for r in parse_write_batch(payload):
+                            yield r
+                    except Exception:
+                        pass
+
 def build_tables():
     print("Building StayFree Coral Tables...")
     events = []
@@ -82,7 +151,121 @@ def build_tables():
     anomalies = []
     dedup_set = set()
     
-    # Read raw CSV events
+    # 1. Parse active live sessions from IndexedDB log files first (Down-to-the-second live sync)
+    indexeddb_dir = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project\stayfree_indexeddb_temp"
+    parsed_count = 0
+    if os.path.exists(indexeddb_dir):
+        for filename in os.listdir(indexeddb_dir):
+            if filename.endswith(".log"):
+                log_path = os.path.join(indexeddb_dir, filename)
+                for action, key, val in parse_log_file(log_path):
+                    if action == 'PUT':
+                        if b'appId' in val and b'startedAt' in val:
+                            try:
+                                # Parse appId (domain)
+                                idx_app = val.find(b'appId')
+                                if idx_app == -1 or idx_app + 6 >= len(val):
+                                    continue
+                                len_app = val[idx_app + 6]
+                                domain = val[idx_app + 7 : idx_app + 7 + len_app].decode('utf-8', errors='ignore')
+                                
+                                # Parse startedAt
+                                idx_start = val.find(b'startedAt')
+                                if idx_start == -1 or idx_start + 17 >= len(val):
+                                    continue
+                                if val[idx_start + 9] != ord('N'):
+                                    continue
+                                started_at = struct.unpack('<d', val[idx_start + 10 : idx_start + 10 + 8])[0]
+                                
+                                # Parse endedAt
+                                ended_at = None
+                                idx_end = val.find(b'endedAt')
+                                if idx_end != -1 and idx_end + 15 <= len(val):
+                                    if val[idx_end + 7] == ord('N'):
+                                        ended_at = struct.unpack('<d', val[idx_end + 8 : idx_end + 8 + 8])[0]
+                                
+                                # Parse path
+                                path_str = ""
+                                idx_path = val.find(b'path')
+                                if idx_path != -1 and idx_path + 5 < len(val):
+                                    len_path = val[idx_path + 5]
+                                    path_str = val[idx_path + 6 : idx_path + 6 + len_path].decode('utf-8', errors='ignore')
+                                    
+                                duration = (ended_at - started_at) / 1000 if ended_at else 0.0
+                                
+                                # Ignore zero or impossible durations
+                                if duration <= 0 or duration > 86400:
+                                    continue
+                                    
+                                # Convert startedAt to ISO timestamp UTC
+                                dt_utc = datetime.fromtimestamp(started_at / 1000, timezone.utc)
+                                ts_utc_str = dt_utc.isoformat().replace("+00:00", "") + "Z"
+                                
+                                # Convert to IST (UTC + 5.5 hours)
+                                dt_ist = dt_utc + timedelta(hours=5, minutes=30)
+                                date_ist = dt_ist.strftime("%Y-%m-%d")
+                                hour_ist = dt_ist.hour
+                                weekday_ist = dt_ist.weekday()
+                                
+                                # Deduplicate based on (timestamp, domain, platform)
+                                is_pkg = "." in domain and domain.replace(".", "").islower() and not domain.endswith(".com") and not domain.endswith(".org") and not domain.endswith(".net")
+                                platform = "android" if is_pkg else "web"
+                                
+                                # Full domain clean
+                                domain_clean = domain
+                                if not is_pkg and path_str:
+                                    if "youtube.com" in domain and "shorts" in path_str:
+                                        domain_clean = "youtube.com/shorts"
+                                    elif "instagram.com" in domain and "reels" in path_str:
+                                        domain_clean = "instagram.com/reels"
+                                
+                                dedup_key = (ts_utc_str, domain_clean.lower().strip(), platform)
+                                if dedup_key in dedup_set:
+                                    continue
+                                dedup_set.add(dedup_key)
+                                
+                                event_id = generate_event_id(ts_utc_str, domain_clean, platform, duration, "IndexedDB Log")
+                                cat, sub = get_category_and_sub(domain_clean)
+                                is_late = hour_ist >= 23 or hour_ist < 5
+                                late_window = "None"
+                                if is_late:
+                                    if hour_ist >= 23 or hour_ist < 1:
+                                        late_window = "23:00-01:00"
+                                    elif hour_ist >= 1 and hour_ist < 3:
+                                        late_window = "01:00-03:00"
+                                    else:
+                                        late_window = "03:00-05:00"
+                                        
+                                events.append({
+                                    "event_id": event_id,
+                                    "timestamp_utc": ts_utc_str,
+                                    "timestamp_ist": dt_ist.isoformat(),
+                                    "date_ist": date_ist,
+                                    "hour_ist": hour_ist,
+                                    "weekday_ist": weekday_ist,
+                                    "platform": platform,
+                                    "device_type": "PC-Windows" if platform == "web" else "Mobile-Android",
+                                    "domain_or_app": domain_clean,
+                                    "app_or_domain_normalized": domain_clean.lower().strip(),
+                                    "category": cat,
+                                    "subcategory": sub,
+                                    "duration_seconds": duration,
+                                    "duration_minutes": round(duration / 60.0, 2),
+                                    "is_web": "true" if platform == "web" else "false",
+                                    "is_android": "true" if platform == "android" else "false",
+                                    "is_late_night": "true" if is_late else "false",
+                                    "late_night_window": late_window,
+                                    "source": "IndexedDB Log",
+                                    "raw_key": f"key-{event_id[:8]}",
+                                    "raw_payload_available": "true",
+                                    "data_quality_flags": "None"
+                                })
+                                parsed_count += 1
+                            except Exception:
+                                pass
+    print(f"Successfully injected {parsed_count} live sessions from StayFree IndexedDB logs.")
+    
+    # 2. Read raw CSV events (Fallback / Historical)
     with open(raw_csv_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -125,9 +308,11 @@ def build_tables():
                 })
                 continue
                 
-            # Generate Event ID and deduplicate
+            ts_utc_str = dt_utc.isoformat() + "Z"
             event_id = generate_event_id(dt_utc.isoformat(), domain, platform, duration, source)
-            if event_id in dedup_set:
+            # Deduplicate based on (timestamp, domain, platform)
+            dedup_key = (ts_utc_str, domain.lower().strip(), platform)
+            if dedup_key in dedup_set:
                 anomalies.append({
                     "reason": "DUPLICATE_EVENT_ID",
                     "event_id": event_id,
@@ -135,7 +320,7 @@ def build_tables():
                     "timestamp": raw_time
                 })
                 continue
-            dedup_set.add(event_id)
+            dedup_set.add(dedup_key)
             
             # Map Category
             cat, sub = get_category_and_sub(domain)

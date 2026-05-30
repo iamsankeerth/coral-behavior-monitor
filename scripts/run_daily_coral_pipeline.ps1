@@ -43,6 +43,19 @@ try {
         Log-Message "Executing extract_stayfree.js to refresh CSV..."
         node "$workspace\extract_stayfree.js" | Out-Null
         Log-Message "StayFree CSV refreshed successfully."
+        
+        # Copy StayFree IndexedDB leveldb files
+        $indexeddb_src = "$env:USERPROFILE\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\chrome-extension_elfaihghhjjoknimpccccmkioofjjfkf_0.indexeddb.leveldb"
+        $indexeddb_dst = "$workspace\stayfree_indexeddb_temp"
+        if (Test-Path $indexeddb_src) {
+            Log-Message "Copying active IndexedDB database files (excluding locks)..."
+            if (Test-Path $indexeddb_dst) { Remove-Item $indexeddb_dst -Recurse -Force }
+            New-Item -ItemType Directory -Path $indexeddb_dst -Force | Out-Null
+            Copy-Item -Path "$indexeddb_src\*" -Destination $indexeddb_dst -Exclude "LOCK" -Force
+            Log-Message "StayFree IndexedDB files successfully duplicated to stayfree_indexeddb_temp."
+        } else {
+            Log-Message "StayFree IndexedDB directory not found." "WARN"
+        }
     } else {
         Log-Message "StayFree local extension directory not found. Proceeding with backup CSV." "WARN"
     }

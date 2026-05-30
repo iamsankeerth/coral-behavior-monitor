@@ -55,6 +55,12 @@ The daily table in the SQLite database is named `behavior_health_daily`. The col
 - **"How is my focus / productivity?"**
   ➜ Query `focus_ratio`, `focus_minutes`, and `top_app_or_domain` from `behavior_health_daily`.
 
+### 🌙 Smart Waking Day Rollover (Midnight to 4:00 AM IST)
+- If Sankeerth asks about "today" or "my time spent" between **12:00 AM and 4:00 AM IST**, he is asking about the active waking day that just ended (yesterday).
+- In this timezone rollover window, you **MUST** query both yesterday's date (e.g. `2026-05-30`) and today's date (e.g. `2026-05-31`).
+- Present the statistics for the waking day (yesterday) clearly, clarifying: *"Since it is past midnight, here are your stats for yesterday (e.g. May 30) where your active logs are full..."* followed by any early metrics for the new day.
+
+
 ---
 
 ## 2. ⏱️ Data Freshness & Live Collection Timestamps
