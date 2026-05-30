@@ -515,6 +515,122 @@ ORDER BY focus_ratio DESC LIMIT 5;`,
         </div>
       </section>
 
+      {/* 6.5 HERMES WHATSAPP AI AGENT SECTION */}
+      <section id="hermes" className="max-w-7xl mx-auto px-6 py-20 border-t border-customBorder">
+        <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-xs font-mono text-emerald-400">
+            <Sparkles className="h-3 w-3" />
+            <span>AI Personal Focus Assistant</span>
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+            Hermes WhatsApp SQL Agent Integration
+          </h2>
+          <p className="text-customMuted">
+            Query your local Coral behavior metrics in natural language directly over WhatsApp, coupled with an hourly focus guardian.
+          </p>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-12 items-center">
+          {/* Feature List */}
+          <div className="flex-1 space-y-6">
+            <h3 className="text-2xl font-bold text-customText">Your personal focus guardian</h3>
+            <p className="text-customMuted leading-relaxed">
+              We integrated the **NousResearch Hermes Agent** locally. By reading your system prompts directly from `SOUL.md`, Hermes leverages local terminal tools to query your Coral SQL database and push real-time updates.
+            </p>
+            
+            <div className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <div className="h-8 w-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+                  <Terminal className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-customText">Natural Language to SQL Bridge</h4>
+                  <p className="text-xs text-customMuted mt-1">
+                    Ask questions like *"How many steps did I take yesterday?"* or *"Did I watch Reels?"*. Hermes translates this dynamically and runs local SQL.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="h-8 w-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+                  <Sliders className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-customText">Stateful doomscrolling warnings</h4>
+                  <p className="text-xs text-customMuted mt-1">
+                    An hourly background scheduler evaluates your active scrolling. If thresholds are crossed, warning messages escalate from Level 1 to Level 5.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="h-8 w-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+                  <Sliders className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-customText">Context-Aware Data separation</h4>
+                  <p className="text-xs text-customMuted mt-1">
+                    Correctly splits **PC Data** (StayFree browser) and **Mobile Screen data** (StayFree Android) with local time zone formatting (`YYYY-MM-DD HH:MM:SS (IST)`).
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive WhatsApp UI Mockup */}
+          <div className="flex-1 w-full max-w-md">
+            <div className="bg-[#0b141a] rounded-2xl border border-customBorder overflow-hidden shadow-2xl shadow-emerald-500/5">
+              {/* WA Header */}
+              <div className="bg-[#202c33] px-4 py-3 flex items-center space-x-3 border-b border-customBorder/50">
+                <div className="h-9 w-9 rounded-full bg-emerald-500 flex items-center justify-center text-darkBg font-bold text-sm">
+                  ⚕️
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-customText">Hermes Focus Agent</div>
+                  <div className="text-[9px] text-emerald-400">online • Coral Analytics</div>
+                </div>
+              </div>
+
+              {/* WA Chat Body */}
+              <div className="p-4 space-y-4 text-xs h-[360px] overflow-y-auto bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat bg-opacity-5">
+                
+                {/* User Message */}
+                <div className="flex justify-end">
+                  <div className="bg-[#005c4b] text-customText p-2.5 rounded-lg max-w-[80%] rounded-tr-none shadow">
+                    <p>What is my time spent on YouTube today?</p>
+                    <span className="text-[8px] text-customText/60 block text-right mt-1">11:02 PM ✓✓</span>
+                  </div>
+                </div>
+
+                {/* Processing Note */}
+                <div className="flex justify-center">
+                  <div className="bg-[#182229] border border-customBorder/30 text-customMuted px-3 py-1 rounded text-[9px] font-mono">
+                    🤖 running: hermes_query.py --sql "SELECT youtube_minutes..."
+                  </div>
+                </div>
+
+                {/* Agent Message */}
+                <div className="flex justify-start">
+                  <div className="bg-[#202c33] text-customText p-3 rounded-lg max-w-[90%] rounded-tl-none shadow space-y-2">
+                    <p>You spent <strong>49.87 minutes</strong> on YouTube today.</p>
+                    
+                    <div className="bg-[#0b141a] p-2 rounded border border-customBorder/40 font-mono text-[9px] text-customMuted">
+                      <div className="text-emerald-400 font-bold mb-1">⏱️ Live Sync Timestamps</div>
+                      <div>*PC Data last updated: 2026-05-30 17:00:24 (IST)</div>
+                      <div>*Mobile Screen data last updated: 2026-05-30 16:56:37 (IST)</div>
+                    </div>
+
+                    <p className="text-[10px] text-emerald-400/90 italic">*Retrieved live from local Coral SQL-join behavior database.</p>
+                    <span className="text-[8px] text-customMuted block text-right">11:02 PM</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 7. PRIVACY SECTION */}
       <section id="privacy" className="max-w-7xl mx-auto px-6 py-20 border-t border-customBorder">
         <div className="bg-surface rounded-2xl border border-customBorder p-8 md:p-12 flex flex-col md:flex-row items-center gap-12 relative overflow-hidden">
