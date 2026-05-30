@@ -1,0 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  background-color: #070908;
+  color: #F4F7F2;
+  font-family: 'Outfit', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Premium developer-infra grid background styling */
+.tech-grid {
+  background-image: 
+    radial-gradient(at 50% 0%, rgba(255, 107, 90, 0.08) 0px, transparent 50%),
+    linear-gradient(rgba(37, 48, 43, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 48, 43, 0.2) 1px, transparent 1px);
+  background-size: 100% 100%, 40px 40px, 40px 40px;
+}
