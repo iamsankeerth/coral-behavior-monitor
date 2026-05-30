@@ -34,7 +34,7 @@ st.markdown("""
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 </style>
-""", unsafe_allow_stdio=True)
+""", unsafe_allow_html=True)
 
 # Define file paths
 workspace = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project"
