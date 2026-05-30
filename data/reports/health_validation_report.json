@@ -1,7 +1,8 @@
 {
   "status": "SUCCESS",
+  "data_source": "REAL_DATABASE",
   "processed_days": 62,
-  "steps_average": 5750.55,
-  "sleep_average_min": 408.97,
-  "total_workouts": 24
+  "steps_average": 13251.11,
+  "sleep_average_min": 410.26,
+  "total_workouts": 11
 }

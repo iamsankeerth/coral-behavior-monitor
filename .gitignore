@@ -21,3 +21,13 @@ Thumbs.db
 config/credentials.json
 config/client_secret_*.json
 config/token.pickle
+
+# Large Raw Datasets, Logs & Zips
+data/raw/
+data/logs/
+*.db
+*.zip
+stayfree_clean_analytics.csv
+web_usage_analytics.csv
+stayfree_analysis_summary.json
+extract_stayfree_data.py

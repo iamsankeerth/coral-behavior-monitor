@@ -60,10 +60,30 @@ def download_latest_backup():
     if not service:
         return False
         
-    print("Searching Google Drive for latest Health Connect export files...")
-    
-    # Query files matching "Health Connect" in ZIP or database format, ordered by modified time
-    query = "name contains 'Health Connect' and (mimeType = 'application/zip' or name contains '.db')"
+    print("Searching Google Drive for folder 'Data from Health Connect'...")
+    folder_id = None
+    try:
+        folder_results = service.files().list(
+            q="mimeType = 'application/vnd.google-apps.folder' and name = 'Data from Health Connect' and trashed = false",
+            spaces='drive',
+            fields='files(id, name)'
+        ).execute()
+        folders = folder_results.get('files', [])
+        if folders:
+            folder_id = folders[0]['id']
+            print(f"Found folder 'Data from Health Connect' (ID: {folder_id})")
+        else:
+            print("Folder 'Data from Health Connect' not found. Falling back to global search...")
+    except Exception as e:
+        print(f"Warning: Failed to search for folder: {e}. Falling back to global search...")
+
+    # Build query based on whether folder was found
+    if folder_id:
+        query = f"'{folder_id}' in parents and trashed = false"
+    else:
+        query = "name contains 'Health Connect' and (mimeType = 'application/zip' or name contains '.db') and trashed = false"
+        
+    print("Searching for the latest backup file...")
     results = service.files().list(
         q=query,
         spaces='drive',
@@ -74,7 +94,7 @@ def download_latest_backup():
     files = results.get('files', [])
     
     if not files:
-        print("❌ No 'Health Connect' files found in your Google Drive!")
+        print("❌ No files found in the target search query!")
         return False
         
     latest_file = files[0]
