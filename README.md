@@ -136,5 +136,51 @@ streamlit run app/app.py
 ---
 
 ## ⚠️ Limitations & Future Work
-* **Reels/Shorts package granularity**: Syntnced Android events only contain the generic package names (`com.instagram.android` and `com.google.android.youtube`). Browser URLs provide `HIGH` confidence path detection, while mobile events degrade gracefully to `LOW` confidence.
-* **Next Steps**: Wire your SQLite Health Connect DB directly using Coral's official community Google Drive connector.
+* **Reels/Shorts package granularity**: Synced Android events only contain the generic package names (`com.instagram.android` and `com.google.android.youtube`). Browser URLs provide `HIGH` confidence path detection, while mobile events degrade gracefully to `LOW` confidence.
+
+---
+
+## 🔮 Next Steps: Wire Your SQLite Health Connect DB Directly Using Coral's Official Google Drive Connector
+
+While the local daily pipeline automates downloading and extracting the raw `health_connect_export.db` using local Python libraries, the ultimate architecture mounts Google Drive directly into the **Coral SQL Reasoning Engine**. 
+
+You can configure Coral to mount your Google Drive folder as a live remote database source by utilizing the official **Coral Google Drive Source Connector**.
+
+### 🛠️ Configuration Steps:
+
+1. **Acquire the Connector**:
+   The source definition and connector files can be found in the community sources repository:
+   [Coral Google Drive Source Connector](https://github.com/withcoral/coral/tree/main/sources/community/google_drive)
+
+2. **Define the Remote Source**:
+   Create a new YAML source definition file at `coral_sources/behavior_monitor_drive.yaml`:
+   ```yaml
+   name: behavior_monitor_drive
+   type: google_drive
+   config:
+     folder_name: "Data from Health Connect"
+     credentials_file: "config/credentials.json"
+     file_pattern: "*.db"
+   tables:
+     - name: steps_record_table
+       path: "health_connect_export.db/steps_record_table"
+     - name: exercise_session_record_table
+       path: "health_connect_export.db/exercise_session_record_table"
+     - name: total_calories_burned_record_table
+       path: "health_connect_export.db/total_calories_burned_record_table"
+   ```
+
+3. **Mount the Source**:
+   Register the remote Google Drive source directly in your Coral workspace:
+   ```bash
+   coral source add --file coral_sources/behavior_monitor_drive.yaml
+   ```
+
+4. **Query Directly in Real-Time**:
+   Coral will seamlessly query your Google Drive folders dynamically over the wire!
+   ```sql
+   SELECT SUM(count) 
+   FROM behavior_monitor_drive.steps_record_table 
+   WHERE local_date = 20234;
+   ```
+
