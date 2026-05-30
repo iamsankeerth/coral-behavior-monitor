@@ -8,11 +8,11 @@ This status report details the current operational readiness and verified metric
 
 | Parameter | Status / Value | Verification / Context |
 | :--- | :--- | :--- |
-| **Processed StayFree Events** | **19,366** | Deduplicated and validated from master settings database copy. |
-| **StayFree Daily Rows** | **62 Days** | Grouped strictly by local Asia/Kolkata timezone (IST) date boundaries. |
-| **Health Daily Rows** | **62 Days** | Sandbox-correlated steps, sleep stages, and workout sessions generated. |
-| **Master Joined Rows** | **62 Days** | Consolidated outer-joined rows ready for Coral reasoning. |
-| **Date Range Covered** | **2026-03-30 to 2026-05-30** | Dynamic 2-month active behavior window. |
+| **Processed StayFree Events** | **18,964** | Deduplicated and validated from master settings database copy. |
+| **StayFree Daily Rows** | **63 Days** | Grouped strictly by local Asia/Kolkata timezone (IST) date boundaries. |
+| **Health Daily Rows** | **63 Days** | Sandbox-correlated steps, sleep stages, and workout sessions generated. |
+| **Master Joined Rows** | **63 Days** | Consolidated outer-joined rows ready for Coral reasoning. |
+| **Date Range Covered** | **2026-03-30 to 2026-05-31** | Dynamic 2-month active behavior window. |
 | **Timezone Parsing** | **IST (UTC + 5:30)** | Verified. Shifting hours correct. |
 | **Reels/Shorts Detection** | **Enabled** | Mapped URL suffix boundaries. Package boundaries map to LOW confidence. |
 | **Health Connect Database** | **Configured** | SQLite schema parsed and report compiled. Local testing seeded via sandbox. |

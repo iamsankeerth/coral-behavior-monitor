@@ -20,7 +20,7 @@ Coral acts as the central query, reasoning, and schema layer. Rather than using 
 ---
 
 ## 📊 Mapped Data Sources
-1. **StayFree Screen-Time Master**: Extracted local Edge browser LevelDB and synced Android events (**19,366 verified logs**).
+1. **StayFree Screen-Time Master**: Extracted local Edge browser LevelDB and synced Android events (**18,964 verified logs**).
 2. **Health Connect Export**: SQLite database tracking daily steps, sleep phases (Light, Deep, REM), and workouts.
 
 ---
@@ -30,7 +30,7 @@ Coral acts as the central query, reasoning, and schema layer. Rather than using 
 ```
 +------------------------------------+      +------------------------------------+
 |  StayFree LevelDB Folder (Copy)    |      |  Health Connect daily SQLite (GD)  |
-|  (19,366 active sessions)          |      |  (Correlated local steps, sleep)   |
+|  (18,964 active sessions)          |      |  (Correlated local steps, sleep)   |
 +-----------------+------------------+      +-----------------+------------------+
                   |                                           |
                   v (extract_stayfree.js)                     v (inspect_health_connect_db.py)
