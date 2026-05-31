@@ -40,10 +40,15 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+import sys
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts"))
+from path_config import PathConfig
+
 # Define file paths
-workspace = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project"
-master_csv = os.path.join(workspace, "data", "coral", "csv", "behavior_health_daily.csv")
-events_csv = os.path.join(workspace, "data", "coral", "csv", "stayfree_events.csv")
+config = PathConfig()
+workspace = config.workspace
+master_csv = config.out_master_csv
+events_csv = config.out_events_csv
 
 st.markdown('<h1 class="main-header">🕸️ Coral Personal Behavior & Health Monitor</h1>', unsafe_allow_html=True)
 st.markdown("### Privacy-First Analytics Pipeline — Custom No-Assumption Build")
@@ -75,7 +80,7 @@ col1, col2, col3, col4, col5 = st.columns(5)
 total_days = len(df)
 
 # Check and extract real values strictly
-has_sleep = "sleep_minutes" in df and df["sleep_minutes"].dropna().notempty if hasattr(df["sleep_minutes"], 'dropna') else False
+has_sleep = "sleep_minutes" in df and not df["sleep_minutes"].dropna().empty if hasattr(df["sleep_minutes"], 'dropna') else False
 avg_sleep = df["sleep_minutes"].dropna().mean() / 60.0 if "sleep_minutes" in df and not df["sleep_minutes"].dropna().empty else None
 
 avg_steps = df["steps_total"].mean() if "steps_total" in df else 0

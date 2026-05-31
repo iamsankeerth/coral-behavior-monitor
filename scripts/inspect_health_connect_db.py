@@ -1,8 +1,13 @@
 import os
+import sys
+# Add scripts directory to path to support in-process imports from any context
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import json
+from path_config import PathConfig
 
-report_md_path = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project\data\reports\health_connect_schema_report.md"
-report_json_path = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project\data\reports\health_connect_schema_report.json"
+config = PathConfig()
+report_md_path = os.path.join(config.report_dir, "health_connect_schema_report.md")
+report_json_path = os.path.join(config.report_dir, "health_connect_schema_report.json")
 
 os.makedirs(os.path.dirname(report_md_path), exist_ok=True)
 

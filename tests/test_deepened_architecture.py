@@ -9,7 +9,8 @@ class TestDeepenedArchitecture(unittest.TestCase):
     Unit test suite verifying the architecture deepening refactors.
     """
     def setUp(self):
-        self.workspace = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project"
+        from scripts.path_config import PathConfig
+        self.workspace = PathConfig().workspace
         self.pipeline_engine = DataPipelineEngine(self.workspace)
         self.analytics_engine = CoralAnalyticsEngine(self.workspace)
 

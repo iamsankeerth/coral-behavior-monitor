@@ -1,4 +1,7 @@
 import os
+import sys
+# Add scripts directory to path to support in-process imports from any context
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import csv
 import json
 import sqlite3
@@ -9,32 +12,76 @@ import hashlib
 import yaml
 import struct
 from datetime import datetime, timedelta, timezone
+from path_config import PathConfig
+
+def parse_utc_to_ist(time_str):
+    """Utility for timezone conversions (UTC to IST)."""
+    if not time_str or time_str == "N/A":
+        return None, None, None, None, None
+        
+    try:
+        cleaned_str = time_str.replace("Z", "+00:00")
+        dt_utc = datetime.fromisoformat(cleaned_str)
+        dt_ist = dt_utc + timedelta(hours=5, minutes=30)
+        date_ist = dt_ist.strftime("%Y-%m-%d")
+        hour_ist = dt_ist.hour
+        weekday_ist = dt_ist.weekday()
+        return dt_utc, dt_ist, date_ist, hour_ist, weekday_ist
+    except Exception:
+        return None, None, None, None, None
+
+def generate_event_id(ts_utc, domain, plat, dur, src):
+    """Utility for stable event ID hash generation."""
+    raw_str = f"{ts_utc}_{domain}_{plat}_{dur}_{src}"
+    return hashlib.md5(raw_str.encode('utf-8')).hexdigest()
+
+def get_category_and_sub(domain_or_app, category_map):
+    """Utility for category mapping and subcategory detection."""
+    cat = "unknown"
+    sub = "None"
+    
+    if domain_or_app in category_map:
+        cat = category_map[domain_or_app]
+    else:
+        for k, v in category_map.items():
+            if k in domain_or_app:
+                cat = v
+                break
+                
+    if "youtube.com/shorts" in domain_or_app:
+        sub = "youtube_shorts"
+    elif "instagram.com/reels" in domain_or_app:
+        sub = "instagram_reels"
+        
+    return cat, sub
 
 class DataPipelineEngine:
     """
     Unified Data Pipeline Engine for Coral Behavior-Health Monitor.
     Consolidates the StayFree extraction, health aggregation, and behavior_health_daily joins.
     """
-    def __init__(self, workspace=r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project"):
-        self.workspace = workspace
-        self.raw_csv_path = os.path.join(workspace, "stayfree_clean_analytics.csv")
-        self.raw_json_path = os.path.join(workspace, "stayfree_raw_dump.json")
-        self.mapping_path = os.path.join(workspace, "config", "category_mapping.yaml")
+    def __init__(self, workspace=None):
+        self.config = PathConfig(workspace)
+        self.workspace = self.config.workspace
         
-        self.out_events_csv = os.path.join(workspace, "data", "coral", "csv", "stayfree_events.csv")
-        self.out_events_jsonl = os.path.join(workspace, "data", "coral", "jsonl", "stayfree_events.jsonl")
-        self.out_daily_csv = os.path.join(workspace, "data", "coral", "csv", "stayfree_daily.csv")
-        self.out_daily_jsonl = os.path.join(workspace, "data", "coral", "jsonl", "stayfree_daily.jsonl")
+        self.raw_csv_path = self.config.raw_csv_path
+        self.raw_json_path = self.config.raw_json_path
+        self.mapping_path = self.config.mapping_path
         
-        self.db_path = os.path.join(workspace, "data", "raw", "health_connect", "health_connect_export.db")
-        self.out_health_csv = os.path.join(workspace, "data", "coral", "csv", "health_daily.csv")
-        self.out_health_jsonl = os.path.join(workspace, "data", "coral", "jsonl", "health_daily.jsonl")
+        self.out_events_csv = self.config.out_events_csv
+        self.out_events_jsonl = self.config.out_events_jsonl
+        self.out_daily_csv = self.config.out_daily_csv
+        self.out_daily_jsonl = self.config.out_daily_jsonl
         
-        self.out_master_csv = os.path.join(workspace, "data", "coral", "csv", "behavior_health_daily.csv")
-        self.out_master_jsonl = os.path.join(workspace, "data", "coral", "jsonl", "behavior_health_daily.jsonl")
+        self.db_path = self.config.db_path
+        self.out_health_csv = self.config.out_health_csv
+        self.out_health_jsonl = self.config.out_health_jsonl
         
-        self.report_dir = os.path.join(workspace, "data", "reports")
-        self.log_dir = os.path.join(workspace, "data", "logs")
+        self.out_master_csv = self.config.out_master_csv
+        self.out_master_jsonl = self.config.out_master_jsonl
+        
+        self.report_dir = self.config.report_dir
+        self.log_dir = self.config.log_dir
         
         # Ensure directories exist
         os.makedirs(os.path.dirname(self.out_events_csv), exist_ok=True)
@@ -50,42 +97,80 @@ class DataPipelineEngine:
             self.category_map = {}
 
     def get_category_and_sub(self, domain_or_app):
-        cat = "unknown"
-        sub = "None"
-        
-        if domain_or_app in self.category_map:
-            cat = self.category_map[domain_or_app]
-        else:
-            for k, v in self.category_map.items():
-                if k in domain_or_app:
-                    cat = v
-                    break
-                    
-        if "youtube.com/shorts" in domain_or_app:
-            sub = "youtube_shorts"
-        elif "instagram.com/reels" in domain_or_app:
-            sub = "instagram_reels"
-            
-        return cat, sub
+        return get_category_and_sub(domain_or_app, self.category_map)
 
     def parse_utc_to_ist(self, time_str):
-        if not time_str or time_str == "N/A":
-            return None, None, None, None, None
-            
-        try:
-            cleaned_str = time_str.replace("Z", "+00:00")
-            dt_utc = datetime.fromisoformat(cleaned_str)
-            dt_ist = dt_utc + timedelta(hours=5, minutes=30)
-            date_ist = dt_ist.strftime("%Y-%m-%d")
-            hour_ist = dt_ist.hour
-            weekday_ist = dt_ist.weekday()
-            return dt_utc, dt_ist, date_ist, hour_ist, weekday_ist
-        except Exception:
-            return None, None, None, None, None
+        return parse_utc_to_ist(time_str)
 
     def generate_event_id(self, ts_utc, domain, plat, dur, src):
-        raw_str = f"{ts_utc}_{domain}_{plat}_{dur}_{src}"
-        return hashlib.md5(raw_str.encode('utf-8')).hexdigest()
+        return generate_event_id(ts_utc, domain, plat, dur, src)
+
+    def _enrich_raw_event(self, dt_utc, domain_clean, platform, duration, source, dedup_set):
+        """
+        Enrich a raw event with IST conversion, category mapping, late-night classification,
+        data quality flags, and unique ID generation.
+        Returns the enriched dictionary, or None if the event is a duplicate.
+        """
+        ts_utc_str = dt_utc.isoformat().replace("+00:00", "")
+        if not ts_utc_str.endswith("Z"):
+            ts_utc_str += "Z"
+            
+        dedup_key = (ts_utc_str, domain_clean.lower().strip(), platform)
+        if dedup_key in dedup_set:
+            return None
+        dedup_set.add(dedup_key)
+        
+        # Convert to IST
+        dt_ist = dt_utc + timedelta(hours=5, minutes=30)
+        date_ist = dt_ist.strftime("%Y-%m-%d")
+        hour_ist = dt_ist.hour
+        weekday_ist = dt_ist.weekday()
+        
+        # Category Mapping
+        cat, sub = self.get_category_and_sub(domain_clean)
+        
+        # Late Night Classification
+        is_late = hour_ist >= 23 or hour_ist < 5
+        late_window = "None"
+        if is_late:
+            if hour_ist >= 23 or hour_ist < 1:
+                late_window = "23:00-01:00"
+            elif hour_ist >= 1 and hour_ist < 3:
+                late_window = "01:00-03:00"
+            else:
+                late_window = "03:00-05:00"
+                
+        # Data Quality Flags
+        dq_flags = []
+        if duration > 28800:
+            dq_flags.append("SUSPICIOUS_LONG_DURATION")
+            
+        event_id = self.generate_event_id(ts_utc_str, domain_clean, platform, duration, source)
+        
+        return {
+            "event_id": event_id,
+            "timestamp_utc": ts_utc_str,
+            "timestamp_ist": dt_ist.isoformat(),
+            "date_ist": date_ist,
+            "hour_ist": hour_ist,
+            "weekday_ist": weekday_ist,
+            "platform": platform,
+            "device_type": "PC-Windows" if platform == "web" else "Mobile-Android",
+            "domain_or_app": domain_clean,
+            "app_or_domain_normalized": domain_clean.lower().strip(),
+            "category": cat,
+            "subcategory": sub,
+            "duration_seconds": duration,
+            "duration_minutes": round(duration / 60.0, 2),
+            "is_web": "true" if platform == "web" else "false",
+            "is_android": "true" if platform == "android" else "false",
+            "is_late_night": "true" if is_late else "false",
+            "late_night_window": late_window,
+            "source": source,
+            "raw_key": f"key-{event_id[:8]}",
+            "raw_payload_available": "true",
+            "data_quality_flags": ";".join(dq_flags) if dq_flags else "None"
+        }
 
     # --- PURE-PYTHON CHROMIUM INDEXEDDB LEVELDB LOG PARSER HELPERS ---
     def _read_varint32(self, data, offset):
@@ -157,8 +242,8 @@ class DataPipelineEngine:
         print("Stage 1: Replicating active Chromium settings and IndexedDB files...")
         
         # 1. Local Extension Settings (LevelDB)
-        src_settings = os.path.expandvars(r"%USERPROFILE%\AppData\Local\Microsoft\Edge\User Data\Default\Local Extension Settings\elfaihghhjjoknimpccccmkioofjjfkf")
-        dst_settings = os.path.join(self.workspace, "stayfree_temp_copy")
+        src_settings = self.config.active_settings_src
+        dst_settings = self.config.stayfree_temp_copy
         if os.path.exists(src_settings):
             try:
                 if os.path.exists(dst_settings):
@@ -177,8 +262,8 @@ class DataPipelineEngine:
             print("Warning: Edge settings source path not found.")
 
         # 2. IndexedDB (LevelDB logs containing real-time scrolling sessions)
-        src_idb = os.path.expandvars(r"%USERPROFILE%\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\chrome-extension_elfaihghhjjoknimpccccmkioofjjfkf_0.indexeddb.leveldb")
-        dst_idb = os.path.join(self.workspace, "stayfree_indexeddb_temp")
+        src_idb = self.config.active_indexeddb_src
+        dst_idb = self.config.stayfree_indexeddb_temp
         if os.path.exists(src_idb):
             try:
                 if os.path.exists(dst_idb):
@@ -216,7 +301,7 @@ class DataPipelineEngine:
         dedup_set = set()
         
         # 1. Parse active live sessions from IndexedDB log files (Down-to-the-second live sync)
-        indexeddb_dir = os.path.join(self.workspace, "stayfree_indexeddb_temp")
+        indexeddb_dir = self.config.stayfree_indexeddb_temp
         parsed_count = 0
         if os.path.exists(indexeddb_dir):
             for filename in os.listdir(indexeddb_dir):
@@ -263,13 +348,6 @@ class DataPipelineEngine:
                                         
                                     # Convert startedAt to ISO timestamp UTC
                                     dt_utc = datetime.fromtimestamp(started_at / 1000, timezone.utc)
-                                    ts_utc_str = dt_utc.isoformat().replace("+00:00", "") + "Z"
-                                    
-                                    # Convert to IST
-                                    dt_ist = dt_utc + timedelta(hours=5, minutes=30)
-                                    date_ist = dt_ist.strftime("%Y-%m-%d")
-                                    hour_ist = dt_ist.hour
-                                    weekday_ist = dt_ist.weekday()
                                     
                                     is_pkg = "." in domain and domain.replace(".", "").islower() and not domain.endswith(".com") and not domain.endswith(".org") and not domain.endswith(".net")
                                     platform = "android" if is_pkg else "web"
@@ -281,55 +359,15 @@ class DataPipelineEngine:
                                         elif "instagram.com" in domain and "reels" in path_str:
                                             domain_clean = "instagram.com/reels"
                                     
-                                    dedup_key = (ts_utc_str, domain_clean.lower().strip(), platform)
-                                    if dedup_key in dedup_set:
+                                    event = self._enrich_raw_event(dt_utc, domain_clean, platform, duration, "IndexedDB Log", dedup_set)
+                                    if not event:
                                         continue
-                                    dedup_set.add(dedup_key)
                                     
-                                    event_id = self.generate_event_id(ts_utc_str, domain_clean, platform, duration, "IndexedDB Log")
-                                    cat, sub = self.get_category_and_sub(domain_clean)
-                                    is_late = hour_ist >= 23 or hour_ist < 5
-                                    late_window = "None"
-                                    if is_late:
-                                        if hour_ist >= 23 or hour_ist < 1:
-                                            late_window = "23:00-01:00"
-                                        elif hour_ist >= 1 and hour_ist < 3:
-                                            late_window = "01:00-03:00"
-                                        else:
-                                            late_window = "03:00-05:00"
-                                            
-                                    dq_flags = []
-                                    if duration > 28800:
-                                        dq_flags.append("SUSPICIOUS_LONG_DURATION")
-
-                                    events.append({
-                                        "event_id": event_id,
-                                        "timestamp_utc": ts_utc_str,
-                                        "timestamp_ist": dt_ist.isoformat(),
-                                        "date_ist": date_ist,
-                                        "hour_ist": hour_ist,
-                                        "weekday_ist": weekday_ist,
-                                        "platform": platform,
-                                        "device_type": "PC-Windows" if platform == "web" else "Mobile-Android",
-                                        "domain_or_app": domain_clean,
-                                        "app_or_domain_normalized": domain_clean.lower().strip(),
-                                        "category": cat,
-                                        "subcategory": sub,
-                                        "duration_seconds": duration,
-                                        "duration_minutes": round(duration / 60.0, 2),
-                                        "is_web": "true" if platform == "web" else "false",
-                                        "is_android": "true" if platform == "android" else "false",
-                                        "is_late_night": "true" if is_late else "false",
-                                        "late_night_window": late_window,
-                                        "source": "IndexedDB Log",
-                                        "raw_key": f"key-{event_id[:8]}",
-                                        "raw_payload_available": "true",
-                                        "data_quality_flags": ";".join(dq_flags) if dq_flags else "None"
-                                    })
-                                    
+                                    events.append(event)
+                                    date_ist = event["date_ist"]
                                     if date_ist not in daily_stats:
                                         daily_stats[date_ist] = []
-                                    daily_stats[date_ist].append(events[-1])
+                                    daily_stats[date_ist].append(event)
                                     
                                     parsed_count += 1
                                 except Exception:
@@ -378,65 +416,24 @@ class DataPipelineEngine:
                         })
                         continue
                         
-                    ts_utc_str = dt_utc.isoformat() + "Z"
-                    event_id = self.generate_event_id(dt_utc.isoformat(), domain, platform, duration, source)
-                    dedup_key = (ts_utc_str, domain.lower().strip(), platform)
-                    if dedup_key in dedup_set:
+                    event = self._enrich_raw_event(dt_utc, domain, platform, duration, source, dedup_set)
+                    if not event:
                         anomalies.append({
                             "reason": "DUPLICATE_EVENT_ID",
-                            "event_id": event_id,
+                            "event_id": self.generate_event_id(dt_utc.isoformat(), domain, platform, duration, source),
                             "domain": domain,
                             "timestamp": raw_time
                         })
                         continue
-                    dedup_set.add(dedup_key)
                     
-                    cat, sub = self.get_category_and_sub(domain)
-                    is_late = hour_ist >= 23 or hour_ist < 5
-                    late_window = "None"
-                    if is_late:
-                        if hour_ist >= 23 or hour_ist < 1:
-                            late_window = "23:00-01:00"
-                        elif hour_ist >= 1 and hour_ist < 3:
-                            late_window = "01:00-03:00"
-                        else:
-                            late_window = "03:00-05:00"
-                            
-                    dq_flags = []
-                    if duration > 28800:
-                        dq_flags.append("SUSPICIOUS_LONG_DURATION")
-                        
-                    events.append({
-                        "event_id": event_id,
-                        "timestamp_utc": dt_utc.isoformat() + "Z",
-                        "timestamp_ist": dt_ist.isoformat(),
-                        "date_ist": date_ist,
-                        "hour_ist": hour_ist,
-                        "weekday_ist": weekday_ist,
-                        "platform": platform,
-                        "device_type": "PC-Windows" if platform == "web" else "Mobile-Android",
-                        "domain_or_app": domain,
-                        "app_or_domain_normalized": domain.lower().strip(),
-                        "category": cat,
-                        "subcategory": sub,
-                        "duration_seconds": duration,
-                        "duration_minutes": round(duration / 60.0, 2),
-                        "is_web": "true" if platform == "web" else "false",
-                        "is_android": "true" if platform == "android" else "false",
-                        "is_late_night": "true" if is_late else "false",
-                        "late_night_window": late_window,
-                        "source": source,
-                        "raw_key": f"key-{event_id[:8]}",
-                        "raw_payload_available": "true",
-                        "data_quality_flags": ";".join(dq_flags) if dq_flags else "None"
-                    })
-                    
+                    events.append(event)
+                    date_ist = event["date_ist"]
                     if date_ist not in daily_stats:
                         daily_stats[date_ist] = []
-                    daily_stats[date_ist].append(events[-1])
+                    daily_stats[date_ist].append(event)
 
         # 3. Parse active sessions directly from Edge Browser History SQLite DB (Real-time Fallback)
-        edge_db_path = os.path.expandvars(r"%USERPROFILE%\AppData\Local\Microsoft\Edge\User Data\Default\History")
+        edge_db_path = os.path.join(self.config.edge_profile_path, "History")
         edge_parsed_count = 0
         if os.path.exists(edge_db_path):
             try:
@@ -471,12 +468,6 @@ class DataPipelineEngine:
                         continue
                         
                     dt_utc = CHROME_EPOCH + timedelta(microseconds=visit_time)
-                    ts_utc_str = dt_utc.isoformat().replace("+00:00", "") + "Z"
-                    
-                    dt_ist = dt_utc.astimezone(ist)
-                    date_ist = dt_ist.strftime("%Y-%m-%d")
-                    hour_ist = dt_ist.hour
-                    weekday_ist = dt_ist.weekday()
                     
                     parsed_url = urlparse(url)
                     domain = parsed_url.netloc
@@ -491,55 +482,15 @@ class DataPipelineEngine:
                         domain_clean = "instagram.com/reels"
                         
                     platform = "web"
-                    dedup_key = (ts_utc_str, domain_clean.lower().strip(), platform)
-                    if dedup_key in dedup_set:
+                    event = self._enrich_raw_event(dt_utc, domain_clean, platform, duration, "Edge History", dedup_set)
+                    if not event:
                         continue
-                    dedup_set.add(dedup_key)
-                    
-                    event_id = self.generate_event_id(ts_utc_str, domain_clean, platform, duration, "Edge History")
-                    cat, sub = self.get_category_and_sub(domain_clean)
-                    is_late = hour_ist >= 23 or hour_ist < 5
-                    late_window = "None"
-                    if is_late:
-                        if hour_ist >= 23 or hour_ist < 1:
-                            late_window = "23:00-01:00"
-                        elif hour_ist >= 1 and hour_ist < 3:
-                            late_window = "01:00-03:00"
-                        else:
-                            late_window = "03:00-05:00"
-                            
-                    dq_flags = []
-                    if duration > 28800:
-                        dq_flags.append("SUSPICIOUS_LONG_DURATION")
-
-                    events.append({
-                        "event_id": event_id,
-                        "timestamp_utc": ts_utc_str,
-                        "timestamp_ist": dt_ist.isoformat(),
-                        "date_ist": date_ist,
-                        "hour_ist": hour_ist,
-                        "weekday_ist": weekday_ist,
-                        "platform": platform,
-                        "device_type": "PC-Windows",
-                        "domain_or_app": domain_clean,
-                        "app_or_domain_normalized": domain_clean.lower().strip(),
-                        "category": cat,
-                        "subcategory": sub,
-                        "duration_seconds": duration,
-                        "duration_minutes": round(duration / 60.0, 2),
-                        "is_web": "true",
-                        "is_android": "false",
-                        "is_late_night": "true" if is_late else "false",
-                        "late_night_window": late_window,
-                        "source": "Edge History",
-                        "raw_key": f"key-{event_id[:8]}",
-                        "raw_payload_available": "true",
-                        "data_quality_flags": ";".join(dq_flags) if dq_flags else "None"
-                    })
-                    
+                        
+                    events.append(event)
+                    date_ist = event["date_ist"]
                     if date_ist not in daily_stats:
                         daily_stats[date_ist] = []
-                    daily_stats[date_ist].append(events[-1])
+                    daily_stats[date_ist].append(event)
                     
                     edge_parsed_count += 1
                     

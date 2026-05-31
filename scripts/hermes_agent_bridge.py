@@ -9,10 +9,13 @@ from datetime import datetime
 from data_pipeline_engine import DataPipelineEngine
 from hermes_communication_adapter import HermesCliAdapter, InMemoryMessageLogger
 
+from path_config import PathConfig
+
 # Path Configurations
-workspace = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project"
-master_csv = os.path.join(workspace, "data", "coral", "csv", "behavior_health_daily.csv")
-state_file = os.path.join(workspace, "data", "logs", "hermes_session_state.json")
+config = PathConfig()
+workspace = config.workspace
+master_csv = config.out_master_csv
+state_file = os.path.join(config.log_dir, "hermes_session_state.json")
 config_file = os.path.join(workspace, "config", "hermes_config.json")
 
 # Ensure directories exist

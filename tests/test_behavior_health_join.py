@@ -4,18 +4,23 @@ import csv
 import json
 from datetime import datetime, timedelta
 
+import sys
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts"))
+from path_config import PathConfig
+
 # Targets to test
-events_csv = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project\data\coral\csv\stayfree_events.csv"
-events_jsonl = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project\data\coral\jsonl\stayfree_events.jsonl"
-daily_csv = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project\data\coral\csv\stayfree_daily.csv"
-health_csv = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project\data\coral\csv\health_daily.csv"
-master_csv = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project\data\coral\csv\behavior_health_daily.csv"
+config = PathConfig()
+events_csv = config.out_events_csv
+events_jsonl = config.out_events_jsonl
+daily_csv = config.out_daily_csv
+health_csv = config.out_health_csv
+master_csv = config.out_master_csv
 
 class TestCoralBehaviorHealthPipeline(unittest.TestCase):
 
     def test_utc_to_ist_rollover(self):
         """Test that UTC to IST conversions handle midnight boundaries correctly."""
-        from scripts.build_stayfree_coral_tables import parse_utc_to_ist
+        from scripts.data_pipeline_engine import parse_utc_to_ist
         # 18:45 UTC on April 29 -> 00:15 IST on April 30
         dt_utc, dt_ist, date_ist, hour_ist, weekday_ist = parse_utc_to_ist("2026-04-29T18:45:00.000Z")
         self.assertEqual(date_ist, "2026-04-30")
@@ -24,7 +29,7 @@ class TestCoralBehaviorHealthPipeline(unittest.TestCase):
 
     def test_late_night_window(self):
         """Test that hours inside 23:00 - 05:00 IST are correctly flagged as late night."""
-        from scripts.build_stayfree_coral_tables import get_category_and_sub
+        from scripts.data_pipeline_engine import get_category_and_sub
         # Helper check
         late_hours = [23, 0, 1, 2, 3, 4]
         for h in late_hours:
@@ -38,7 +43,7 @@ class TestCoralBehaviorHealthPipeline(unittest.TestCase):
 
     def test_event_id_deduplication(self):
         """Test that duplicate events with identical hashes are correctly ignored."""
-        from scripts.build_stayfree_coral_tables import generate_event_id
+        from scripts.data_pipeline_engine import generate_event_id
         h1 = generate_event_id("2026-04-29T17:30:10.000Z", "youtube.com", "web", "60.0", "Settings")
         h2 = generate_event_id("2026-04-29T17:30:10.000Z", "youtube.com", "web", "60.0", "Settings")
         self.assertEqual(h1, h2)

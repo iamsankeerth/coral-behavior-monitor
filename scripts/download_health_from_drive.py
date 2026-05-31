@@ -9,11 +9,14 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from google.auth.transport.requests import Request
 
+from path_config import PathConfig
+
 # Configurations
-workspace = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project"
+config = PathConfig()
+workspace = config.workspace
 credentials_path = os.path.join(workspace, "config", "credentials.json")
 token_pickle_path = os.path.join(workspace, "config", "token.pickle")
-raw_health_dir = os.path.join(workspace, "data", "raw", "health_connect")
+raw_health_dir = config.health_connect_export_folder
 
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 

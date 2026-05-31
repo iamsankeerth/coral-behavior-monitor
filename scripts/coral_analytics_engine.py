@@ -6,18 +6,109 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 from data_pipeline_engine import DataPipelineEngine
+from path_config import PathConfig
 
 class CoralAnalyticsEngine:
     """
     Unified In-Process Analytics Engine for the Coral SQLite behavior database.
     Provides query execution and data freshness tracking.
     """
-    def __init__(self, workspace=r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project"):
-        self.workspace = workspace
-        self.master_csv = os.path.join(workspace, "data", "coral", "csv", "behavior_health_daily.csv")
-        self.stayfree_events_csv = os.path.join(workspace, "data", "coral", "csv", "stayfree_events.csv")
-        self.health_connect_db = os.path.join(workspace, "data", "raw", "health_connect", "health_connect_export.db")
-        self.pipeline_engine = DataPipelineEngine(workspace)
+    DIAGNOSTIC_QUERIES = {
+        "1": {
+            "title": "Basic Master Table Verification",
+            "sql": """SELECT 
+    date_ist, 
+    steps_total, 
+    sleep_minutes, 
+    total_screen_minutes, 
+    data_quality_flags
+FROM behavior_health_daily 
+ORDER BY date_ist DESC 
+LIMIT 5;"""
+        },
+        "2": {
+            "title": "Sleep Duration vs. Late-Night Digital Screen Activity",
+            "sql": """SELECT 
+    date_ist, 
+    sleep_minutes, 
+    late_night_minutes,
+    sleep_disruption_index
+FROM behavior_health_daily
+ORDER BY date_ist DESC
+LIMIT 14;"""
+        },
+        "3": {
+            "title": "Top 10 Worst Sleep Durations and Digital Activity",
+            "sql": """SELECT 
+    date_ist, 
+    sleep_minutes, 
+    late_night_minutes, 
+    youtube_minutes, 
+    instagram_minutes, 
+    top_app_or_domain
+FROM behavior_health_daily
+WHERE sleep_minutes IS NOT NULL
+ORDER BY sleep_minutes ASC
+LIMIT 10;"""
+        },
+        "4": {
+            "title": "High Instagram / Reels Engagement Days",
+            "sql": """SELECT 
+    date_ist, 
+    instagram_minutes, 
+    instagram_reels_minutes_if_detected, 
+    sleep_minutes, 
+    steps_total
+FROM behavior_health_daily
+ORDER BY instagram_minutes DESC
+LIMIT 10;"""
+        },
+        "5": {
+            "title": "Workout Engagement vs. Active Screen Time",
+            "sql": """SELECT 
+    date_ist, 
+    workout_minutes, 
+    total_screen_minutes, 
+    focus_ratio
+FROM behavior_health_daily
+WHERE workout_minutes > 0
+ORDER BY date_ist DESC;"""
+        },
+        "6": {
+            "title": "High Focus Ratio Profiles (Most Productive Days)",
+            "sql": """SELECT 
+    date_ist, 
+    focus_ratio, 
+    focus_minutes, 
+    leisure_minutes, 
+    sleep_minutes, 
+    steps_total
+FROM behavior_health_daily
+ORDER BY focus_ratio DESC
+LIMIT 10;"""
+        },
+        "7": {
+            "title": "Late-Night Sleep Disruption Index",
+            "sql": """SELECT 
+    date_ist, 
+    sleep_disruption_index, 
+    late_night_minutes, 
+    sleep_minutes
+FROM behavior_health_daily
+WHERE sleep_disruption_index IS NOT NULL
+ORDER BY sleep_disruption_index DESC
+LIMIT 10;"""
+        }
+    }
+
+    def __init__(self, workspace=None):
+        self.config = PathConfig(workspace)
+        self.workspace = self.config.workspace
+        self.master_csv = self.config.out_master_csv
+        self.stayfree_events_csv = self.config.out_events_csv
+        self.health_connect_db = self.config.db_path
+        self.pipeline_engine = DataPipelineEngine(self.workspace)
+
 
     def trigger_sync(self):
         """
