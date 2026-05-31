@@ -4,7 +4,7 @@ This report summarizes the data verification, transformation, and load (ETL) run
 
 ## 📊 Summary Statistics
 
-* **Processed Event Rows**: **18964** (Deduplicated & validated)
+* **Processed Event Rows**: **18967** (Deduplicated & validated)
 * **Processed Days**: **63** (Local IST Date Boundary)
 * **Clean Events Ratio**: **88.44%**
 * **Anomaly Records Filtered**: **2479**
