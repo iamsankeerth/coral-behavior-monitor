@@ -1,13 +1,17 @@
 import os
+import sys
+# Add scripts directory to path to support in-process imports from any context
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import csv
 import json
-import subprocess
+import argparse
 from datetime import datetime
+from data_pipeline_engine import DataPipelineEngine
+from hermes_communication_adapter import HermesCliAdapter, InMemoryMessageLogger
 
 # Path Configurations
 workspace = r"C:\Users\lenovo\Desktop\San\Fun_Projects\Coral Project"
 master_csv = os.path.join(workspace, "data", "coral", "csv", "behavior_health_daily.csv")
-pipeline_script = os.path.join(workspace, "scripts", "run_daily_coral_pipeline.ps1")
 state_file = os.path.join(workspace, "data", "logs", "hermes_session_state.json")
 config_file = os.path.join(workspace, "config", "hermes_config.json")
 
@@ -50,52 +54,41 @@ def load_config():
     default_config = {
         "whatsapp_target": "whatsapp:iamsan",  # Matches your registered TUI target
         "reels_shorts_limit": REELS_SHORTS_LIMIT,
-        "total_screen_limit": TOTAL_SCREEN_LIMIT
+        "total_screen_limit": TOTAL_SCREEN_LIMIT,
+        "adapter_type": "cli"  # Option: "cli" or "mock"
     }
     os.makedirs(os.path.dirname(config_file), exist_ok=True)
     with open(config_file, 'w', encoding='utf-8') as f:
         json.dump(default_config, f, indent=4)
     return default_config
 
-def run_pipeline():
-    print("[1/4] Running daily Coral pipeline to extract freshest Edge & Android logs...")
-    try:
-        res = subprocess.run(
-            ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", pipeline_script],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        return True, res.stdout
-    except Exception as e:
-        return False, str(e)
-
-def send_via_hermes(target, text):
-    if not target:
-        return False, "Delivery target is empty."
-        
-    try:
-        # Run the native hermes send command
-        res = subprocess.run(
-            ["hermes", "send", "--to", target, text],
-            shell=True,
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        return True, "Message delivered successfully via Hermes CLI!"
-    except subprocess.CalledProcessError as e:
-        return False, f"Hermes CLI error (Exit Code {e.returncode}): {e.stderr.strip() or e.stdout.strip()}"
-    except Exception as e:
-        return False, f"Failed to invoke Hermes executable: {e}"
-
 def main():
+    parser = argparse.ArgumentParser(description="Hermes Agent Notification Bridge")
+    parser.add_argument("--mock", action="store_true", help="Force mock message logging instead of direct Hermes CLI push")
+    args = parser.parse_args()
+
     config = load_config()
     limit = config.get("reels_shorts_limit", REELS_SHORTS_LIMIT)
     target = config.get("whatsapp_target", "whatsapp:iamsan")
     
-    # 1. Update data
-    success, log_out = run_pipeline()
+    # Select Messaging Adapter based on parameters or config
+    adapter_type = "mock" if args.mock else config.get("adapter_type", "cli")
+    if adapter_type == "mock":
+        message_adapter = InMemoryMessageLogger()
+    else:
+        message_adapter = HermesCliAdapter()
+        
+    print(f"[1/4] Running daily Coral pipeline in-process using DataPipelineEngine...")
+    
+    pipeline_engine = DataPipelineEngine(workspace)
+    try:
+        pipeline_engine.sync()
+        success = True
+        log_out = "Pipeline executed successfully in-process."
+    except Exception as e:
+        success = False
+        log_out = str(e)
+        
     if not success:
         print(json.dumps({"error": f"Failed to run pipeline: {log_out}"}))
         return
@@ -159,8 +152,8 @@ def main():
         selected_msg = msg_template["message"].format(minutes=total_reels_shorts)
         style = msg_template["style"]
         
-        # Send Push Notification via Hermes CLI Native Gateway
-        w_success, w_status = send_via_hermes(target, selected_msg)
+        # Send Push Notification via the Seam Adapter
+        w_success, w_status = message_adapter.send_message(target, selected_msg)
         whatsapp_sent = w_success
         whatsapp_status = w_status
         
@@ -194,6 +187,7 @@ def main():
         "pushed_whatsapp_message": selected_msg if limit_exceeded else "N/A",
         "whatsapp_status": whatsapp_status,
         "whatsapp_pushed": whatsapp_sent,
+        "adapter_used": adapter_type,
         "suggested_hermes_prompt": f"Write a highly motivational, philosophical message for a developer who is struggling with doomscrolling. Today they spent {total_reels_shorts} minutes on Reels/Shorts (Limit: {limit} mins). Depth level: {escalation_level}/5. Keep it impactful, reframing, and supportive."
     }
     

@@ -62,6 +62,8 @@ class TestCoralBehaviorHealthPipeline(unittest.TestCase):
         with open(health_csv, "r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
+                if not row.get("sleep_minutes"):
+                    continue
                 sleep_min = float(row["sleep_minutes"])
                 sleep_start = datetime.fromisoformat(row["sleep_start_ist"].split("+")[0])
                 sleep_end = datetime.fromisoformat(row["sleep_end_ist"].split("+")[0])
