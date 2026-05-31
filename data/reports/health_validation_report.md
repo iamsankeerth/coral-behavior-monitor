@@ -4,4 +4,4 @@ This report summarizes the daily physical health aggregates generated in the **H
 ## 🏃 Summary Statistics
 * **Data Source**: **REAL_DATABASE**
 * **Processed Days**: **63**
-* **Average Daily Steps**: **13040.78** steps
+* **Average Daily Steps**: **6715.44** steps

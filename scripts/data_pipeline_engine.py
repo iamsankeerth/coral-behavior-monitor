@@ -694,12 +694,32 @@ This report summarizes the data verification, transformation, and load (ETL) run
                 conn = sqlite3.connect(self.db_path)
                 cursor = conn.cursor()
                 
-                # Steps aggregation
-                cursor.execute("SELECT start_time, start_zone_offset, count FROM steps_record_table;")
-                for start_time, zone_offset, count in cursor.fetchall():
+                # Steps aggregation with priority package deduplication (Google Fit > other sources)
+                cursor.execute("""
+                    SELECT 
+                        steps.start_time, 
+                        steps.start_zone_offset, 
+                        steps.count, 
+                        app.package_name
+                    FROM steps_record_table steps
+                    LEFT JOIN application_info_table app ON steps.app_info_id = app.row_id;
+                """)
+                
+                daily_pkg_steps = {}
+                for start_time, zone_offset, count, package_name in cursor.fetchall():
                     local_sec = (start_time / 1000.0) + zone_offset
                     date_str = datetime.fromtimestamp(local_sec, timezone.utc).strftime('%Y-%m-%d')
-                    real_steps[date_str] = real_steps.get(date_str, 0) + count
+                    if date_str not in daily_pkg_steps:
+                        daily_pkg_steps[date_str] = {}
+                    pkg_key = package_name if package_name else "unknown"
+                    daily_pkg_steps[date_str][pkg_key] = daily_pkg_steps[date_str].get(pkg_key, 0) + count
+                    
+                # Apply priority rule: com.google.android.apps.fitness > other sources
+                for date_str, pkgs in daily_pkg_steps.items():
+                    if "com.google.android.apps.fitness" in pkgs:
+                        real_steps[date_str] = pkgs["com.google.android.apps.fitness"]
+                    else:
+                        real_steps[date_str] = sum(pkgs.values())
                     
                 # Workouts aggregation
                 cursor.execute("SELECT start_time, end_time, start_zone_offset FROM exercise_session_record_table;")
